@@ -1,0 +1,93 @@
+%% figura.sty -- Figura diagrams as plain TikZ: export them, or write them yourself.
+%%
+%%   \usepackage{figura}
+%%   \begin{figura}                      % 1 unit = 1 canvas pixel (\fgu, default 2/3 pt); y points down
+%%     \node[fg box, fill=fgRose] (a) at (0,0)   {Hello};
+%%     \node[fg circle]           (b) at (160,0) {$q_0$};
+%%     \draw[fg line, ->] (a) -- node[fg label] {$f$} (b);
+%%     \draw[fg line, ->] (b) to[loop at=90] (b);
+%%   \end{figura}
+%%
+%% Shapes   fg dot (or fg dot=5: diameter), fg box, fg circle (an ellipse), fg diamond, fg triangle (+ points down/left/right), fg text, fg image
+%% Size     w=80, h=40 (canvas px), r=6 (corner radius); text size=18, bold, italic; \fgvert{...} for vertical text
+%% Border   draw=fgBlue, lw=2.5, dashed, dotted, dashes={on}{off}, dots={gap}, double border, draw=none
+%% Colours  fill=fgSky, text=fgRed, or any hex: fill hex=A04070, draw hex=..., text hex=...
+%% Lines    fg line + ->, <->, -{Triangle}, -{Triangle[open]}, ->>, -{Circle}, -{Circle[open]}, -|, -{Hooks[right]}
+%%          bend left=20 / bend right=20, loop at=90 (degrees, 90 = up), wave, zigzag, double line
+%% Labels   node[fg label] (left of the direction), node[fg label, swap] (right), node[fg label on] (on the line), pos=0.3 (along)
+%%          outside a shape: \node[fg box, label={[fg olabel]above:{text}}]  (above / below / left / right)
+%% Options  \begin{figura}[scale=1.2]  \begin{figura}[unit=0.5pt]  \begin{figura}[baseline=north]
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{figura}[2026/11/12 v2.0 Figura diagrams]
+\RequirePackage{tikz}
+\RequirePackage{graphicx}
+\RequirePackage{amsmath}
+\usetikzlibrary{arrows.meta,shapes.geometric,decorations.pathmorphing}
+\newdimen\fgu \fgu=0.66667pt
+\def\fg@baseline{center}
+\pgfkeys{/figura/.is family,
+  /figura/unit/.code={\fgu=#1\relax},
+  /figura/scale/.code={\fgu=#1\fgu\relax},
+  /figura/baseline/.code={\def\fg@baseline{#1}}}
+\newcommand\figuraset[1]{\pgfkeys{/figura,#1}}
+%% ---- colours (Figura's palette and quick colours)
+\definecolor{fgInk}{HTML}{1D1D1F} \definecolor{fgRose}{HTML}{FDE2E1} \definecolor{fgPeach}{HTML}{FEEAD6} \definecolor{fgSand}{HTML}{FDF1C7}
+\definecolor{fgMint}{HTML}{DCF3E5} \definecolor{fgSky}{HTML}{DBEAFE} \definecolor{fgLilac}{HTML}{E6E1FB} \definecolor{fgStone}{HTML}{F1EFEC}
+\definecolor{fgGrey}{HTML}{6E7581} \definecolor{fgRed}{HTML}{C4524E} \definecolor{fgOrange}{HTML}{D0793A} \definecolor{fgGreen}{HTML}{3F8C6A}
+\definecolor{fgBlue}{HTML}{3A6DB3} \definecolor{fgViolet}{HTML}{6F5FC4} \definecolor{fgPink}{HTML}{B05482} \definecolor{fgMuted}{HTML}{8E8E93}
+\definecolor{fgAmber}{HTML}{C98A2B} \definecolor{fgSnow}{HTML}{F4F4F2} \definecolor{fgMist}{HTML}{E4E4E0} \definecolor{fgSilver}{HTML}{CBCBC6}
+\definecolor{fgAsh}{HTML}{A3A39E} \definecolor{fgSteel}{HTML}{7A7A7E} \definecolor{fgSlate}{HTML}{56565B} \definecolor{fgGraphite}{HTML}{3A3A3F}
+\definecolor{fgPastelRed}{HTML}{F9E7E6} \definecolor{fgPastelOrange}{HTML}{F9EDE6} \definecolor{fgPastelAmber}{HTML}{F9F3E6} \definecolor{fgPastelLime}{HTML}{F2F9E6}
+\definecolor{fgPastelGreen}{HTML}{E6F9EF} \definecolor{fgPastelTeal}{HTML}{E6F9F8} \definecolor{fgPastelCyan}{HTML}{E6F4F9} \definecolor{fgPastelBlue}{HTML}{E6EDF9}
+\definecolor{fgPastelViolet}{HTML}{EBE6F9} \definecolor{fgPastelPink}{HTML}{F9E6F0} \definecolor{fgSoftRed}{HTML}{EDC8C5} \definecolor{fgSoftOrange}{HTML}{EDD3C5}
+\definecolor{fgSoftAmber}{HTML}{EDDFC5} \definecolor{fgSoftLime}{HTML}{DDEDC5} \definecolor{fgSoftGreen}{HTML}{C5EDD7} \definecolor{fgSoftTeal}{HTML}{C5EDE9}
+\definecolor{fgSoftCyan}{HTML}{C5E1ED} \definecolor{fgSoftBlue}{HTML}{C5D3ED} \definecolor{fgSoftViolet}{HTML}{CFC5ED} \definecolor{fgSoftPink}{HTML}{EDC5DA}
+\definecolor{fgVividRed}{HTML}{CB5148} \definecolor{fgVividOrange}{HTML}{CB7848} \definecolor{fgVividAmber}{HTML}{CBA048} \definecolor{fgVividLime}{HTML}{97CB48}
+\definecolor{fgVividGreen}{HTML}{48CB85} \definecolor{fgVividTeal}{HTML}{48CBBE} \definecolor{fgVividCyan}{HTML}{48A4CB} \definecolor{fgVividBlue}{HTML}{4878CB}
+\definecolor{fgVividViolet}{HTML}{6B48CB} \definecolor{fgVividPink}{HTML}{CB488E} \definecolor{fgDeepRed}{HTML}{79342F} \definecolor{fgDeepOrange}{HTML}{794A2F}
+\definecolor{fgDeepAmber}{HTML}{79602F} \definecolor{fgDeepLime}{HTML}{5C792F} \definecolor{fgDeepGreen}{HTML}{2F7952} \definecolor{fgDeepTeal}{HTML}{2F7972}
+\definecolor{fgDeepCyan}{HTML}{2F6379} \definecolor{fgDeepBlue}{HTML}{2F4A79} \definecolor{fgDeepViolet}{HTML}{432F79} \definecolor{fgDeepPink}{HTML}{792F57}
+%% ---- text: size in canvas px, line height 1.25
+\def\fg@size{15}\def\fg@series{}\def\fg@shape{}
+\newcommand\fgfont[2]{\edef\fg@fs{\the\dimexpr#1\fgu\relax}\edef\fg@fl{\the\dimexpr#2\fgu\relax}\fontsize{\fg@fs}{\fg@fl}\selectfont}
+\def\fg@font{\edef\fg@fs{\the\dimexpr\fg@size\fgu\relax}\edef\fg@fl{\the\dimexpr5\dimexpr\fg@size\fgu\relax/4\relax}\fontsize{\fg@fs}{\fg@fl}\selectfont\fg@series\fg@shape}
+\newcommand\fgvert[1]{\rotatebox{-90}{\begin{tabular}{@{}c@{}}#1\end{tabular}}}
+\tikzset{
+  size/.code={\def\fg@size{#1}}, bold/.code={\def\fg@series{\bfseries}}, italic/.code={\def\fg@shape{\itshape}},
+  lw/.style={line width=#1\fgu}, w/.style={minimum width=#1\fgu}, h/.style={minimum height=#1\fgu}, r/.style={rounded corners=#1\fgu},
+  fill hex/.code={\definecolor{fg@#1}{HTML}{#1}\pgfkeysalso{fill=fg@#1}},
+  draw hex/.code={\definecolor{fg@#1}{HTML}{#1}\pgfkeysalso{draw=fg@#1}},
+  text hex/.code={\definecolor{fg@#1}{HTML}{#1}\pgfkeysalso{text=fg@#1}},
+  dashes/.style 2 args={dash pattern=on #1\fgu+#1\pgflinewidth off #2\fgu+#2\pgflinewidth},
+  dots/.style={dash pattern=on 0pt off #1\fgu+#1\pgflinewidth+\pgflinewidth, line cap=round},
+  double border/.style={double=white, double distance=2.5\fgu},
+  fg node/.style={draw=fgInk, line width=1.5\fgu, inner sep=3\fgu, outer sep=0pt, align=center, text=fgInk, font=\fg@font},
+  fg box/.style={fg node, rectangle, minimum width=80\fgu, minimum height=40\fgu, rounded corners=6\fgu},
+  fg circle/.style={fg node, ellipse, minimum width=40\fgu, minimum height=40\fgu, inner sep=1\fgu},
+  fg dot/.style={circle, fill=fgInk, draw=none, inner sep=0pt, outer sep=.5\fgu, minimum size=#1\fgu}, fg dot/.default=8,
+  fg ray/.style={}, fg fade/.style={line cap=butt},   % a ray: the line runs on and fades (Figura writes the fading pieces)
+  fg diamond/.style={fg node, diamond, minimum width=56\fgu, minimum height=56\fgu, inner sep=1\fgu, rounded corners=4\fgu},
+  fg triangle/.style={fg node, isosceles triangle, isosceles triangle stretches, shape border rotate=90, minimum width=48\fgu, minimum height=42\fgu, inner sep=1\fgu},
+  points up/.style={shape border rotate=90}, points down/.style={shape border rotate=270},
+  points left/.style={shape border rotate=180}, points right/.style={shape border rotate=0},
+  fg text/.style={inner sep=1\fgu, outer sep=0pt, align=center, text=fgInk, font=\fg@font},
+  fg image/.style={inner sep=0pt, outer sep=0pt},
+  picture/.style n args={3}{path picture={\node[inner sep=0pt] at (path picture bounding box.center) {\includegraphics[width=#2\fgu,height=#3\fgu]{#1}};}},
+  fg line/.style={draw=fgInk, line width=1.4\fgu},
+  double line/.style={double=white, double distance=2.4\fgu},
+  wave/.style={decorate, decoration={snake, amplitude=2.2\fgu, segment length=9\fgu, pre length=3\fgu, post length=8\fgu}},
+  zigzag/.style={decorate, decoration={zigzag, amplitude=2.4\fgu, segment length=8\fgu, pre length=3\fgu, post length=8\fgu}},
+  loop at/.code={\pgfmathsetmacro\fg@o{#1+30}\pgfmathsetmacro\fg@i{#1-30}\pgfkeysalso{loop,out=\fg@o,in=\fg@i,min distance=16\fgu,looseness=6}},
+  fg label/.style={auto, inner sep=2.5\fgu, text=fgInk, font=\fg@font},
+  fg label on/.style={inner sep=2\fgu, fill=white, rounded corners=3\fgu, text=fgInk, font=\fg@font},
+  fg olabel/.style={inner sep=2\fgu, label distance=1.5\fgu, text=fgInk, font=\fg@font},
+}
+\newenvironment{figura}[1][]{%
+  \begingroup\pgfkeys{/figura,#1}%
+  \begin{tikzpicture}[x=\fgu,y=-\fgu,line cap=butt,line join=miter,looseness=.85,
+    >={Straight Barb[length=\the\dimexpr6\fgu\relax,width=\the\dimexpr11\fgu\relax]},
+    dashed/.style={dash pattern=on 4\fgu+2\pgflinewidth off 3\fgu+1.4\pgflinewidth},
+    dotted/.style={dash pattern=on 0pt off 2.4\fgu+1.6\pgflinewidth, line cap=round},
+    baseline=(current bounding box.\fg@baseline)]}%
+  {\end{tikzpicture}\endgroup}
+\endinput

@@ -1,0 +1,27 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# local tooling
+.claude/
+.netlify/
+node_modules/
+*.log
+
+# LaTeX build files (when testing exports)
+*.aux
+*.out
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+
+# personal notes (kept out of the repo)
+agents.md
+AGENTS.md
+project_memory.md
+PROJECT_MEMORY.md
+CLAUDE.md
+CLAUDE.local.md

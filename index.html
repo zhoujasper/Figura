@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Figura</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<link rel="stylesheet" href="style.css?v=90">
+</head>
+<body>
+  <div id="viewport" class="g-dots">
+    <div id="world">
+      <svg id="edges" class="edges"></svg>
+      <div id="nodes"></div>
+      <div id="elabs"></div>
+    </div>
+    <svg id="ov"></svg>
+    <canvas id="laser"></canvas>
+    <div id="hint">
+      <div class="hint-title">Draw anything</div>
+      <div>Pick a shape below and click, or drag a box · <kbd>E</kbd> to connect · double-click to write</div>
+    </div>
+  </div>
+
+  <header class="top">
+    <div class="brand"><span class="logo"></span><span class="bname">Figura</span></div>
+    <div id="tabs" class="tabs"><div class="tab-track"></div><button class="tadd" title="New page"></button></div>
+    <div class="top-actions">
+      <div class="seg gseg" id="gridSeg" title="Grid (G)">
+        <button data-g="dots" title="Dot grid"></button>
+        <button data-g="half" title="Half grid: dots half way too"></button>
+        <button data-g="free" title="Free placement"></button>
+      </div>
+      <span class="tsep"></span>
+      <button class="ibtn" id="btnOpen" title="Pages: new, import, export"></button>
+      <button class="ibtn" id="btnExport" title="Export"></button>
+      <button class="ibtn" id="btnSet" title="Settings"></button>
+      <button class="ibtn" id="btnHelp" title="Shortcuts (?)"></button>
+    </div>
+  </header>
+
+  <nav id="dock">
+    <span class="dock-grip" title="Drag to move the toolbar · double-click to switch side"></span>
+  </nav>
+
+  <div id="sub"></div>
+  <div id="dockHint" hidden></div>
+  <div id="minimap" class="empty"><canvas id="mmc"></canvas><button id="mmTog" class="mm-tog"></button></div>
+
+  <div id="zoombar">
+    <button class="zb zlk" id="btnLock" title="Lock page (K)"></button>
+    <span class="zsep"></span>
+    <button class="zb" id="zUndo" title="Undo (⌘Z)"></button>
+    <button class="zb" id="zRedo" title="Redo (⇧⌘Z)"></button>
+    <span class="zsep"></span>
+    <button class="zb" id="zOut" title="Zoom out (−)"></button>
+    <button class="zb zp" id="zPct" title="Reset to 100%">100%</button>
+    <button class="zb" id="zIn" title="Zoom in (+)"></button>
+    <button class="zb" id="zFit" title="Fit everything (F)"></button>
+  </div>
+
+  <div id="bar" hidden></div>
+  <div id="pp" class="pop" hidden></div>
+  <div id="menu" class="pop menu" hidden></div>
+  <div id="toast" hidden></div>
+  <div id="modal" hidden><div class="mbox"></div></div>
+  <input type="file" id="fileImg" accept="image/*" hidden>
+  <input type="file" id="fileDoc" accept=".figura,.figtool,.json,.tex,application/json" multiple hidden>
+
+  <script src="app.js?v=104"></script>
+</body>
+</html>
