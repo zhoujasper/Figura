@@ -116,7 +116,7 @@ const KDEF = {
   image: { w: 160, h: 120, fill: 'none', stroke: 'none', sw: 1.5, dbl: false, sd: 'solid', rad: 0 },
 };
 const TS = { size: 15, color: '#1d1d1f', bold: false, italic: false, under: false, vert: false };
-const STYLE_KEYS = ['fill', 'stroke', 'sw', 'dbl', 'sd', 'rad', 'dir'];
+const STYLE_KEYS = ['fill', 'stroke', 'sw', 'dbl', 'sd', 'rad', 'dir', 'att'];
 const LS = { doc: 'figura-doc-v1', ws: 'figura-ws-v1', prefs: 'figura-prefs-v1', seen: 'figura-seen-v1', mm: 'figura-mm-v1', dock: 'figura-dock-v1', cp: 'figura-cp-v1', recent: 'figura-recent-v1', order: 'figura-order-v1', docks: 'figura-docks-v1' };
 const lsGet = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
@@ -137,7 +137,7 @@ let cam = { x: 0, y: 0, z: 1 };
 let tool = 'select';
 let holdS = false, parMode = null, nbOn = 0, nbT = 0;
 let drag = null, hov = null, wirePend = null, editing = null, crop = null, guides = [];
-let space = false, undoS = [], redoS = [], clip = null, pasteN = 0, lastPtr = null;
+let space = false, undoS = [], redoS = [], clip = null, clipText = '', pasteN = 0, lastPtr = null, pasteWait = 0;
 
 const vp = $('#viewport'), world = $('#world'), esvg = $('#edges'), nodesL = $('#nodes'), elabsL = $('#elabs'), ov = $('#ov'), lcv = $('#laser');
 const bar = $('#bar'), pp = $('#pp'), menu = $('#menu'), hint = $('#hint');
@@ -372,7 +372,13 @@ function endPt(e, which) {
    follows its own path; 'mid' and vertex ends have no leg. A side with more ends than fit makes the shape grow (portGrow).
    Ports ease to new places (animPort, τ 36 ms) and drawEdges keeps going on rAF while one still moves. */
 const STUB = 9, PSTEP = 14, PMAG = 26, VMAG = 11;
-const hasPorts = n => !!n && n.k !== 'dot';
+/* 'along the line': lines aim at the centre and meet the outline where they cross it (no ports). Circles do that unless n.att = 'pin';
+   other shapes have ports unless n.att = 'free' */
+const isFree = n => n.k === 'circle' ? n.att !== 'pin' : n.att === 'free';
+const hasPorts = n => !!n && n.k !== 'dot' && !isFree(n);
+const attOf = n => isFree(n) ? 'free' : 'pin';
+const ATTS = [['free', sv('<circle cx="10" cy="14" r="6.5"/><path d="M14.6 9.4 21 3"/>', 16), 'Along the line: meets the circle where it points'],
+  ['pin', sv('<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="3.5" r="1.3" fill="currentColor"/><circle cx="20.5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="20.5" r="1.3" fill="currentColor"/><circle cx="3.5" cy="12" r="1.3" fill="currentColor"/>', 16), 'Fixed ports on the sides']];
 const rectLike = n => n.k !== 'circle' && n.k !== 'diamond' && n.k !== 'tri';
 const LAYS = [['', sv('<path d="M6 4v16M6 7.5h9M6 12h9M6 16.5h9"/>', 16), 'Ports spread evenly'],
   ['ends', sv('<path d="M6 4v16M6 6.5h9M6 9.5h9M6 14.5h9M6 17.5h9"/>', 16), 'Ports packed to both ends'],
@@ -883,14 +889,26 @@ function olBox(n) {
   return { hx: c * w / 2 + si * h / 2, hy: si * w / 2 + c * h / 2 };
 }
 const OL_GAP = 5;
+/* n.oa = { side: deg } puts a label anywhere round the shape (screen angle, 0 = right, 90 = down); none = the middle of its side */
+const OL_ANG = { t: -90, r: 0, b: 90, l: 180 };
+const olAng = (n, side) => n.oa?.[side] ?? OL_ANG[side];
 function olPos(n, side, m) {
-  const { hx, hy } = olBox(n);
-  return side === 't' ? { x: n.x, y: n.y - hy - OL_GAP - m.h / 2 } : side === 'b' ? { x: n.x, y: n.y + hy + OL_GAP + m.h / 2 }
-    : side === 'l' ? { x: n.x - hx - OL_GAP - m.w / 2, y: n.y } : { x: n.x + hx + OL_GAP + m.w / 2, y: n.y };
+  const { hx, hy } = olBox(n), a = olAng(n, side) * D2R, c = Math.cos(a), s = Math.sin(a);
+  /* out along the angle until the label's box just clears the shape's box */
+  const k = Math.min(Math.abs(c) > 1e-6 ? (hx + OL_GAP + m.w / 2) / Math.abs(c) : Infinity, Math.abs(s) > 1e-6 ? (hy + OL_GAP + m.h / 2) / Math.abs(s) : Infinity);
+  return { x: n.x + c * k, y: n.y + s * k };
 }
 /* the side of n that q is nearest to, judged against the shape's own proportions */
 function olSideAt(n, q) { const { hx, hy } = olBox(n), dx = (q.x - n.x) / (hx + 12), dy = (q.y - n.y) / (hy + 12); return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'r' : 'l') : (dy > 0 ? 'b' : 't'); }
 /* a double-click just outside a shape (within ~26 screen px) aims at that side's outer label */
+/* a shape whose box holds p even where its outline does not (the corners round an ellipse or a diamond): writing there means its own text */
+function boxHit(p) {
+  for (let i = doc.nodes.length - 1; i >= 0; i--) {
+    const n = doc.nodes[i]; if (n.k === 'dot' || n.k === 'image' || n.dep?.op === 'circ') continue;
+    const { hx, hy } = olBox(n); if (Math.abs(p.x - n.x) <= hx && Math.abs(p.y - n.y) <= hy) return n;
+  }
+  return null;
+}
 function outerHit(p) {
   const m = 26 / cam.z;
   for (let i = doc.nodes.length - 1; i >= 0; i--) {
@@ -942,6 +960,8 @@ function paintNode(n, el, i) {
   const need = needSize(n, m);
   const gr = portGrow(n, n.k === 'text' ? Math.max(need.w, 14) : Math.max(n.w, need.w), n.k === 'text' ? Math.max(need.h, 14) : Math.max(n.h, need.h)), w = gr.w, h = gr.h;
   geo.set(n.id, { w, h, need });
+  /* free-standing text hides the grid dots behind it (not over another shape, not while writing) */
+  el.classList.toggle('bk', n.k === 'text' && !!t && !isEd && !doc.nodes.some(o => o !== n && o.k !== 'text' && Math.abs(o.x - n.x) * 2 < w + (geo.get(o.id)?.w ?? o.w) && Math.abs(o.y - n.y) * 2 < h + (geo.get(o.id)?.h ?? o.h)));
   el.style.cssText = `left:${n.x - w / 2}px;top:${n.y - h / 2}px;width:${w}px;height:${h}px;z-index:${i};transform:rotate(${n.rot || 0}deg)`;
   const { x: sx, y: sy } = labOff(n, w, h);
   lab.style.transform = `translate(calc(-50% + ${f2(sx)}px), calc(-50% + ${f2(sy)}px))`;
@@ -1034,7 +1054,9 @@ function drawOverlay() {
   }
   /* end handles where lines meet the selected shapes (drag along the shape, onto another one, or off it) */
   const pend = [];
-  if ((!drag || drag.t === 'end') && ns.length && ns.length <= 12) {
+  /* writing a label outside a shape: no box, handles or port dots round it */
+  const olEd = editing?.kind === 'olab';
+  if ((!drag || drag.t === 'end') && ns.length && ns.length <= 12 && !olEd) {
     const nid = new Set(ns.map(n => n.id));
     for (const e of doc.edges) {
       if (sel.has(e.id) || (e.a && e.a === e.b)) continue;
@@ -1051,7 +1073,7 @@ function drawOverlay() {
       const cx = (a.x + b.x) / 2, ry = a.y - 30;
       s += `<line class="o-stem" x1="${f2(cx)}" y1="${f2(a.y - 6)}" x2="${f2(cx)}" y2="${f2(ry)}"/><circle class="o-rot h ${drag?.t === 'rot' ? 'on' : ''}" data-h="rot" cx="${f2(cx)}" cy="${f2(ry)}" r="5"/>`;
     }
-  } else if (ns.length === 1) {
+  } else if (ns.length === 1 && !olEd) {
     const n = ns[0], { w, h } = size(n), p = 3 / z, a = w / 2 + p, b = h / 2 + p, r = n.rot || 0;
     s += `<polygon class="o-box" points="${pts(corners(n, p))}"/>`;
     if ((!drag || drag.t === 'rs' || drag.t === 'rot') && !n.dep) {
@@ -1362,29 +1384,30 @@ function newEdge(a, b, pa, pb) {
 }
 /* a straight line from a to b that would run over another shape bends just enough to go round it
    (like ZX Draw): the smallest bend, on the freer side, that keeps 8px from every shape it is not wired to.
+   A straight line that only passes close by (no touch, 2px) stays straight.
    Shapes that hold a or b (a frame around them), pictures and text are ignored. */
 function avoidBend(a, b, gone) {
   const L = Math.hypot(b.x - a.x, b.y - a.y); if (L < 1) return 0;
   const nx = (b.y - a.y) / L, ny = -(b.x - a.x) / L, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
   const obs = doc.nodes.filter(o => o !== a && o !== b && !(gone && gone.has(o.id)) && o.k !== 'image' && o.k !== 'text' && !inside(o, a) && !inside(o, b));
   if (!obs.length) return 0;
-  const M = 8;
-  const clear = bend => {
+  const M = 8;   /* a bend keeps 8px from every shape, but a straight line bends only when it really touches one (2px) */
+  const clear = (bend, m = M) => {
     const C = { x: mx + nx * bend * 2, y: my + ny * bend * 2 };
     for (let i = 1; i < 40; i++) {
       const t = i / 40, u = 1 - t, q = { x: u * u * a.x + 2 * u * t * C.x + t * t * b.x, y: u * u * a.y + 2 * u * t * C.y + t * t * b.y };
       if (inside(a, q, 2) || inside(b, q, 2)) continue;
-      if (obs.some(o => inside(o, q, M))) return false;
+      if (obs.some(o => inside(o, q, m))) return false;
     }
     return true;
   };
-  if (clear(0)) return 0;
+  if (clear(0, 2)) return 0;
   const room = bend => { /* how far the curve's apex is from the nearest shape: used to pick the freer side */
     const q = { x: mx + nx * bend, y: my + ny * bend };
     return Math.min(...obs.map(o => Math.hypot(o.x - q.x, o.y - q.y)));
   };
   for (let k = .08; k <= .75; k += .04) {
-    const v = Math.round(k * L), ok = [v, -v].filter(clear);
+    const v = Math.round(k * L), ok = [v, -v].filter(x => clear(x));
     if (ok.length === 2) return room(v) >= room(-v) ? v : -v;
     if (ok.length) return ok[0];
   }
@@ -1429,12 +1452,29 @@ function deleteSel() {
   });
 }
 function copySel() {
-  const ns = selNodes(); if (!ns.length && !selEdges().length) return false;
-  const ids = new Set(ns.map(n => n.id));
-  const es = doc.edges.filter(e => (!e.a || ids.has(e.a)) && (!e.b || ids.has(e.b)) && (sel.has(e.id) || (e.a && e.b)));
-  clip = { nodes: clone(ns), edges: clone(es) }; pasteN = 0;
+  const ns = selNodes(), ids = new Set(ns.map(n => n.id));
+  /* selected lines come along even without their shapes: a missing end becomes a loose point where it is now */
+  const es = doc.edges.filter(e => sel.has(e.id) || (e.a && e.b && ids.has(e.a) && ids.has(e.b))).map(e => {
+    const c = clone(e), g = egeo.get(e.id) || edgeGeom(e);
+    if (c.a && !ids.has(c.a)) { c.pa = { x: g.P.x, y: g.P.y }; c.a = null; delete c.qa; }
+    if (c.b && !ids.has(c.b)) { c.pb = { x: g.Q.x, y: g.Q.y }; c.b = null; delete c.qb; }
+    return c;
+  });
+  if (!ns.length && !es.length) return false;
+  clip = { nodes: clone(ns), edges: es }; pasteN = 0; clipText = '';
   return true;
 }
+/* ⌘C: keep the copy here and put its TikZ on the system clipboard, so a paste can tell whether the clipboard still holds it */
+function copyOut() {
+  if (!copySel()) return false;
+  let tx = ''; try { tx = latexFor(true, true).tex; } catch { }
+  clipText = tx || '\u0001figura';
+  /* no clipboard access: then every ⌘V pastes this copy */
+  try { navigator.clipboard.writeText(clipText).catch(() => { clipText = null; }); } catch { clipText = null; }
+  toast(sel.size > 1 ? `Copied ${sel.size}` : 'Copied');
+  return true;
+}
+const pasteHere = () => pasteClip(clip, (++pasteN) * (step() || 20));
 function pasteClip(c, off) {
   if (!c) return;
   mutate(() => {
@@ -1596,8 +1636,13 @@ const evS = e => { const r = vp.getBoundingClientRect(); return { x: e.clientX -
 
 vp.addEventListener('pointerdown', e => {
   if (e.target.closest('.editing')) return;
+  /* a press that only closes an open panel / menu / text edit: with a drawing tool it must not also
+     draw a shape or start a line there (same fix as in ZX Draw) */
+  const closing = e.button === 0 && tool !== 'select' && tool !== 'hand' && !e.target.closest('[data-h]')
+    && (!pp.hidden || !menu.hidden || !cpk.hidden || (!hpop.hidden && !hpop.classList.contains('out')) || !!editing);
   if (editing) endEdit();
   closePP(); closeMenu();
+  if (closing) { closeHP(true); e.preventDefault(); return; }
   ptrs.set(e.pointerId, evS(e));
   if (ptrs.size === 2) { startPinch(); return; }
   if (ptrs.size > 2) return;
@@ -1656,9 +1701,11 @@ vp.addEventListener('pointerdown', e => {
     drag = { t: 'none' }; return;
   }
   if (SHAPES.includes(tool) || tool === 'text') {
+    if (tool === 'text') { const tn = (n && n.k !== 'image' && n.k !== 'dot') ? n : (!n && !eid ? boxHit(p) : null); if (tn) { drag = { t: 'none' }; setTimeout(() => editNode(tn), 0); return; } }
     if (n) { pressNode(n, p, sp, e); return; }
     if (eid) { selectOnly(eid); drag = { t: 'none' }; return; }
-    if (tool === 'text') { createText(snapP(p)); return; }
+    /* after the press has finished moving focus, or the new field loses it at once and is dropped as empty */
+    if (tool === 'text') { const q = snapP(p); drag = { t: 'none' }; setTimeout(() => createText(q), 0); return; }
     drag = { t: 'create', k: tool, s: snapP(p), p: snapP(p), sp, moved: false };
     return;
   }
@@ -1752,14 +1799,19 @@ vp.addEventListener('pointermove', e => {
     }
     case 'olab': {
       const n = drag.n, to = olSideAt(n, p), fr = drag.side;
+      /* any angle round the shape; it settles on a side's middle within 8° */
+      let ang = Math.round(Math.atan2(p.y - n.y, p.x - n.x) / D2R); if (ang <= -180) ang += 360;
+      const dm = Math.abs(((ang - OL_ANG[to]) % 360 + 540) % 360 - 180);
       if (to !== fr && n.ol) {
         const a = n.ol[fr], b = n.ol[to]; n.ol[to] = a; if (b) n.ol[fr] = b; else delete n.ol[fr];
+        if (n.oa) { delete n.oa[fr]; delete n.oa[to]; }
         const A = olEls.get(n.id + ':' + fr), B = olEls.get(n.id + ':' + to);
         olEls.delete(n.id + ':' + fr); olEls.delete(n.id + ':' + to);
         if (A) { A.dataset.s = to; olEls.set(n.id + ':' + to, A); A._m = null; }
         if (B) { B.dataset.s = fr; olEls.set(n.id + ':' + fr, B); B._m = null; }
         drag.side = to;
       }
+      if (n.ol) { n.oa = n.oa || {}; if (dm <= 8) delete n.oa[to]; else n.oa[to] = ang; if (!Object.keys(n.oa).length) delete n.oa; }
       render(); break;
     }
     case 'pan': cam.x = drag.cx + sp.x - drag.sx; cam.y = drag.cy + sp.y - drag.sy; applyCam(); break;
@@ -1801,8 +1853,15 @@ vp.addEventListener('pointermove', e => {
       drawOverlay(); break;
     }
     case 'edge': {
-      drag.p = p; const t = hitNode(p);
-      if (t && drag.from && !drag.anc && t !== drag.from && t !== drag.chain.at(-1) && inside(t, p, 0) && t.k !== 'text') drag.chain.push(t);
+      const lp = drag.p || p; drag.p = p; const t = hitNode(p);
+      /* every shape the stroke passed through since the last sample, in order: a fast drag jumps over small ones */
+      if (drag.from && !drag.anc) {
+        const L = Math.hypot(p.x - lp.x, p.y - lp.y), k = Math.max(1, Math.ceil(L / (4 / cam.z)));
+        for (let i = 1; i <= k; i++) {
+          const q = { x: lp.x + (p.x - lp.x) * i / k, y: lp.y + (p.y - lp.y) * i / k }, u = hitNode(q);
+          if (u && u !== drag.from && u !== drag.chain.at(-1) && inside(u, q, 0) && u.k !== 'text') drag.chain.push(u);
+        }
+      }
       drag.target = t && (t !== drag.from || Math.hypot(p.x - drag.s.x, p.y - drag.s.y) > 30 / cam.z || drag.anc) ? t : null;
       if (drag.anc && t === drag.from) drag.target = null;
       /* magnet: within PMAG px of a shape the line is drawn as if already connected */
@@ -1972,8 +2031,10 @@ vp.addEventListener('pointercancel', e => { clearTimeout(longT); endPtr(e); if (
 vp.addEventListener('pointerleave', () => { if (!drag && hov) { hov = null; drawOverlay(); } if (tool === 'laser' && !drag) { laserDot = null; kickLaser(); } });
 
 /* ---------- wiring many at once (as in ZX Draw) ---------- */
-const fanSources = t => selNodes().filter(n => n !== t && n.k !== 'text');
-const fanOn = () => tool === 'edge' && !wirePend && !parMode && selNodes().filter(n => n.k !== 'text').length >= (holdS ? 1 : 2);
+/* text joins in when the selection is only text (labels mixed in with shapes are left out) */
+const wireable = ns => { const s = ns.filter(n => n.k !== 'text'); return s.length ? s : ns; };
+const fanSources = t => wireable(selNodes().filter(n => n !== t));
+const fanOn = () => tool === 'edge' && !wirePend && !parMode && wireable(selNodes()).length >= (holdS ? 1 : 2);
 /* many → one: every selected node gets a line to t (Shift, or holding S, keeps the sources for the next target) */
 function fanTo(t, keep) {
   const src = fanSources(t); if (!src.length) return false;
@@ -2007,7 +2068,9 @@ function linkChain(seq) {
 }
 function swapNodes() {
   const ns = selNodes(); if (ns.length !== 2) return;
-  const [a, b] = ns; mutate(() => { [a.x, b.x] = [b.x, a.x]; [a.y, b.y] = [b.y, a.y]; });
+  /* the lines stay where they are: each shape takes over the other's connections */
+  const [a, b] = ns, sw = id => id === a.id ? b.id : id === b.id ? a.id : id;
+  mutate(() => { [a.x, b.x] = [b.x, a.x]; [a.y, b.y] = [b.y, a.y]; doc.edges.forEach(e => { e.a = sw(e.a); e.b = sw(e.b); }); });
 }
 const NB_COLS = ['#5b5bd6', '#e5484d', '#12a594', '#f76b15', '#8e4ec6', '#0090ff'];
 /* where a copy of n goes when its hover dot at q is clicked: one gap out in that direction, past anything already there */
@@ -2073,8 +2136,9 @@ vp.addEventListener('dblclick', e => {
   const ol = e.target.closest('.olab');
   if (ol && !crop) { const n2 = idx.get(ol.dataset.n); if (n2) editOuter(n2, ol.dataset.s); return; }
   const elab = e.target.closest('.elab');
-  const n = elab ? null : hitNode(p);
+  let n = elab ? null : hitNode(p);
   const eg = elab || (!n && e.target.closest('[data-e]'));
+  if (!n && !eg) n = boxHit(p);
   if (crop) { endCrop(); return; }
   if (n) { if (n.k === 'image') startCrop(n); else editNode(n); return; }
   if (eg) { const ed = edgeById(eg.dataset.e); if (ed) editEdgeLabel(ed, elab ? null : p); return; }
@@ -2126,7 +2190,7 @@ function endEdit() {
   }
   if (ed.kind === 'olab') {
     const n = idx.get(ed.id);
-    if (n && n.ol) { const v = (n.ol[ed.side] || '').replace(/\s+$/, ''); if (v) n.ol[ed.side] = v; else delete n.ol[ed.side]; if (!Object.keys(n.ol).length) delete n.ol; }
+    if (n && n.ol) { const v = (n.ol[ed.side] || '').replace(/\s+$/, ''); if (v) n.ol[ed.side] = v; else { delete n.ol[ed.side]; if (n.oa) { delete n.oa[ed.side]; if (!Object.keys(n.oa).length) delete n.oa; } } if (!Object.keys(n.ol).length) delete n.ol; }
     lab._t = null; getSelection().removeAllRanges(); render(); commit(ed.before); return;
   }
   const n = doc.nodes.find(x => x.id === ed.id);
@@ -2362,7 +2426,7 @@ function updateBar() {
     /* arrange group */
     h += bsep;
     if (shapes.length === 1 || imgs.length === 1 && ns.length === 1) h += imgs.length ? bb('data-a="crop"', IC.crop, 'Crop / move the picture (double-click)') : bb('data-a="imgPick"', small(IC.image), shapes[0].img ? 'Replace the picture inside' : 'Put a picture inside');
-    if (shapes.length === 1 && ns.length === 1 && !shapes[0].dep) h += bb('data-p="olab"', IC.olab, 'Labels outside (double-click beside the shape)', !!shapes[0].ol);
+    if (shapes.length === 1 && ns.length === 1 && !shapes[0].dep) h += bb('data-a="oladd"', IC.olab, 'Add a label outside · drag it round the shape');
     if (ns.length >= 2) h += bb('data-p="align"', ALIGN_IC, 'Align and space');
     /* layer order: laid out flat when the first row has room (dots: nothing else there), else it unfolds on click */
     const roomy = dots.length === ns.length;
@@ -2400,7 +2464,11 @@ function updateBar() {
       + anyDot('tcol', c0, quickOf('qText')) + qAddBtn('qText', c0)
       + vs + tszHTML('tsize', common(texts, n => n.ts.size), 'tBar');
   }
-  { const pn = ns.filter(n => hasPorts(n) && EB.has(n.id)); if (pn.length && !es.length) r2 += (r2 ? vs : '') + seg('play', common(pn, n => n.lay || '') ?? null, LAYS); }
+  if (!es.length) {
+    const cn = ns.filter(n => n.k !== 'dot' && EB.has(n.id)), pn = ns.filter(n => hasPorts(n) && EB.has(n.id));
+    if (cn.length) r2 += (r2 ? vs : '') + seg('catt', common(cn, attOf) ?? null, ATTS);
+    if (pn.length) r2 += (r2 ? vs : '') + seg('play', common(pn, n => n.lay || '') ?? null, LAYS);
+  }
   h = h.replace(/^(<span class="bsep"><\/span>)+/, '');
   h = `<div class="brow">${h}</div>${r2 ? `<div class="brow2">${r2}</div>` : ''}`;
   if (h !== barSig) {
@@ -2734,6 +2802,7 @@ function setRoute(e, v) {
 function setE(key, v) { selEdges().forEach(e => { e[key] = v; }); if (['dash', 'head', 'sw', 'color', 'tail', 'shape'].includes(key)) { prefs.edge[key] = v; savePrefs(); syncDock(); drawSub(true); } }
 const notImg = n => n.k !== 'image', shp = n => n.k !== 'text' && n.k !== 'image';
 function act(a, v, live) {
+  if (a === 'oladd') { const n = selNodes()[0]; if (n) editOuter(n, ['t', 'b', 'r', 'l'].find(sd => !n.ol?.[sd]) || 't'); return; }
   if (a === 'oled') { const n = selNodes()[0]; if (n) editOuter(n, v); return; }
   const b = ppBefore ?? snap();
   if ((a === 'dbl' || a === 'round') && typeof v === 'string') v = v === '1';
@@ -2751,6 +2820,7 @@ function act(a, v, live) {
     case 'radd': { const r0 = common(selNodes().filter(n => shp(n) && n.k !== 'circle'), n => n.rad || 0) ?? 6; setN('rad', clamp(r0 + +v, 1, 99), n => shp(n) && n.k !== 'circle'); const f = pp.querySelector('.nnum[data-a=rad]'); if (f) f.value = clamp(r0 + +v, 1, 99); break; }
     case 'dir': forNodes(n => { if (n.k === 'tri') { const flip = (n.dir === 'up' || n.dir === 'down') !== (v === 'up' || v === 'down'); if (flip) [n.w, n.h] = [n.h, n.w]; n.dir = v; remember(n, 'dir', v); } }); break;
     case 'play': forNodes(n => { if (v) n.lay = v; else delete n.lay; }, hasPorts); break;
+    case 'catt': forNodes(n => { const a = n.k === 'circle' ? (v === 'pin' ? 'pin' : undefined) : (v === 'free' ? 'free' : undefined); if (a) n.att = a; else delete n.att; remember(n, 'att', a); }, n => n.k !== 'dot'); break;
     case 'fitText': forNodes(n => { n.w = KDEF[n.k].w; n.h = KDEF[n.k].h; }, shp); break;
     case 'tsize': case 'tsizeR': setTS('size', +v); break;
     case 'tbold': setTS('bold', !common(selNodes().filter(notImg), n => n.ts.bold)); break;
@@ -2785,7 +2855,12 @@ function act(a, v, live) {
   if (live) { ppBefore = b; return; }
   ppBefore = null; commit(b); refreshPP();
 }
-pp.addEventListener('pointerdown', e => e.stopPropagation());
+/* a field's 'change' fires on the press that leaves it: rebuilding the panel then would swallow that click
+   (ZX Draw had this bug), so the refresh waits until the press is over and its click has run */
+let ppPress = false, ppLater = false;
+pp.addEventListener('pointerdown', e => { e.stopPropagation(); ppPress = true; });
+addEventListener('pointerup', () => { if (!ppPress) return; ppPress = false; setTimeout(() => { if (ppLater) { ppLater = false; refreshPP(); } }, 0); }, true);
+addEventListener('pointercancel', () => { ppPress = false; if (ppLater) { ppLater = false; refreshPP(); } }, true);
 pp.addEventListener('click', e => {
   const b = e.target.closest('button[data-a]'); if (!b) return;
   if (b.closest('.tones')) { act('tone', b.dataset.v); return; }
@@ -2798,7 +2873,7 @@ pp.addEventListener('input', e => {
   if (t.type === 'checkbox') { act(a, t.checked); return; }
   act(a, t.value, true);
 });
-pp.addEventListener('change', e => { const t = e.target; if (t.type === 'checkbox' || pp._edge) return; if (ppBefore != null) { const b = ppBefore; ppBefore = null; commit(b); refreshPP(); } });
+pp.addEventListener('change', e => { const t = e.target; if (t.type === 'checkbox' || pp._edge) return; if (ppBefore != null) { const b = ppBefore; ppBefore = null; commit(b); if (ppPress) ppLater = true; else refreshPP(); } });
 pp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') { if (ppBefore != null) { const b = ppBefore; ppBefore = null; commit(b); } closePP(); } });
 
 /* ---------- colour picker: square / wheel / sliders, any typed format ---------- */
@@ -3587,11 +3662,13 @@ function ctxItems(x, y) {
   if (selNodes().some(n => n.dep)) geo.push({ t: 'Make free (stop following)', ic: GEO_IC.free, f: freeSel });
   const items = [...geo, ...(geo.length ? ['-'] : []),
     { t: 'Duplicate', k: MOD + 'D', ic: IC.dup, f: duplicate },
-    { t: 'Copy', k: MOD + 'C', ic: IC.copy, f: copySel },
+    { t: 'Copy', k: MOD + 'C', ic: IC.copy, f: copyOut },
   ];
   if (selNodes().length + selEdges().length === 1 && !selNodes().some(n => n.dep || n.k === 'image')) items.push({ t: 'Add to toolbar', ic: small(IC.plus), f: addStampFromSel });
-  const pn = selNodes().filter(n => hasPorts(n) && EB.has(n.id));
-  if (pn.length) items.push('-', { t: 'Ports', seg: LAYS, cur: common(pn, n => n.lay || ''), f: v => act('play', v) });
+  const pn = selNodes().filter(n => hasPorts(n) && EB.has(n.id)), cn = selNodes().filter(n => n.k !== 'dot' && EB.has(n.id));
+  if (cn.length || pn.length) items.push('-');
+  if (cn.length) items.push({ t: 'Lines meet', seg: ATTS, cur: common(cn, attOf), f: v => act('catt', v) });
+  if (pn.length) items.push({ t: 'Ports', seg: LAYS, cur: common(pn, n => n.lay || ''), f: v => act('play', v) });
   if (selNodes().length) items.push('-',
     { t: 'Bring to front', k: '⇧' + MOD + ']', ic: IC.ftop, f: () => order('top') },
     { t: 'Bring forward', k: MOD + ']', ic: IC.front, f: () => order('up') },
@@ -3608,7 +3685,7 @@ function ctxAt(cx, cy, p, target) {
   const id = n?.id || (eg ? eg.dataset.e : null);
   if (id) { if (!sel.has(id)) selectOnly(id); openBar(); return; }
   showMenu(cx, cy, [
-    { t: 'Paste', k: MOD + 'V', ic: IC.paste, f: () => pasteClip(clip, (++pasteN) * (step() || 20)) },
+    { t: 'Paste', k: MOD + 'V', ic: IC.paste, f: pasteHere },
     { t: 'Insert picture…', ic: IC.image.replace(/width="18" height="18"/, 'width="16" height="16"'), f: () => { pickAt = p; pickImage(null); } },
     { t: 'Add text', ic: IC.text.replace(/width="18" height="18"/, 'width="16" height="16"'), f: () => createText(snapP(p)) },
     '-',
@@ -3645,9 +3722,13 @@ async function addImageFile(file, at, into) {
   setTool('select');
 }
 document.addEventListener('paste', e => {
+  clearTimeout(pasteWait); pasteWait = 0;
   if (e.target.closest?.('input, textarea, [contenteditable=true], [contenteditable=plaintext-only]')) return;
   if (isLocked()) { lockedStop(); return; }
   const tx = e.clipboardData?.getData('text/plain');
+  /* our own copy is still what the clipboard holds (or the clipboard says nothing): paste it exactly */
+  const nFiles = [...(e.clipboardData?.files || [])].length;
+  if (clip && !nFiles && (clipText === null || !tx || tx === clipText || tx.replace(/\r\n/g, '\n') === clipText)) { e.preventDefault(); pasteHere(); return; }
   if (tx && /%figura:|\\begin\{(figura|tikzpicture)\}|^\s*\\(node|draw)\b/.test(tx)) { const d = parseTikz(tx); if (d) { e.preventDefault(); pasteClip(d, 0); toast('Pasted from LaTeX'); return; } }
   const files = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/'));
   if (files.length) {
@@ -3656,7 +3737,6 @@ document.addEventListener('paste', e => {
     files.forEach((f, i) => addImageFile(f, lastPtr && { x: lastPtr.x + i * 20, y: lastPtr.y + i * 20 }, i ? null : into));
     return;
   }
-  if (clip) { e.preventDefault(); pasteClip(clip, (++pasteN) * (step() || 20)); return; }
   const t = e.clipboardData?.getData('text/plain');
   if (t) { e.preventDefault(); const p = snapP(lastPtr || W(innerWidth / 2, innerHeight / 2)); mutate(() => { const n = newNode('text', p.x, p.y, { text: t.slice(0, 2000) }); doc.nodes.push(n); sel.clear(); sel.add(n.id); }); }
 });
@@ -3682,13 +3762,15 @@ addEventListener('keydown', e => {
   if (isLocked() && (mod ? !'cso0=-'.includes(lk) || lk.length > 1 : !(lk === 'escape' || LOCK_OK.has(actionOf(lk)) || /^[0-9]$/.test(k)))) { e.preventDefault(); lockedStop(); return; }
   if (mod) {
     const h = {
-      z: () => (e.shiftKey ? redo() : undo()), y: redo, c: copySel, x: () => { if (copySel()) deleteSel(); }, d: duplicate, a: selectAll,
+      z: () => (e.shiftKey ? redo() : undo()), y: redo, c: copyOut, x: () => { if (copyOut()) deleteSel(); }, d: duplicate, a: selectAll,
       ']': () => order(e.shiftKey ? 'top' : 'up'), '}': () => order('top'), '[': () => order(e.shiftKey ? 'bottom' : 'down'), '{': () => order('bottom'),
       s: () => saveFile(), o: () => $('#fileDoc').click(), 0: () => zoom100(),
       '=': () => zoomAt(1.2, innerWidth / 2, innerHeight / 2), '-': () => zoomAt(1 / 1.2, innerWidth / 2, innerHeight / 2),
       b: () => selNodes().length && act('tbold'), i: () => selNodes().length && act('tital'), u: () => selNodes().length && act('tunder'),
     }[lk];
     if (h) { e.preventDefault(); h(); }
+    /* ⌘V goes through the paste event (it can read the clipboard); browsers that send none get our own copy */
+    else if (lk === 'v' && !e.shiftKey && clip) { clearTimeout(pasteWait); pasteWait = setTimeout(() => { if (pasteWait) { pasteWait = 0; pasteHere(); } }, 120); }
     return;
   }
   if (e.altKey) return;
@@ -4045,13 +4127,21 @@ ${mine.length ? '%% ---- your own quick colours\n' + rows(mine.map(h => byHex[h]
 `;
 }
 const tn = v => String(Math.round(v * 10) / 10);
+/* π α ⊕ … typed straight into a label: pdflatex stops on them ("Unicode character not set up"), so the export
+   writes macros (as ZX Draw does): inside $…$ as \pi, in text as $\pi$ */
+const UNI = { 'α': 'alpha', 'β': 'beta', 'γ': 'gamma', 'δ': 'delta', 'ε': 'epsilon', 'ζ': 'zeta', 'η': 'eta', 'θ': 'theta', 'ι': 'iota', 'κ': 'kappa', 'λ': 'lambda', 'μ': 'mu', 'ν': 'nu', 'ξ': 'xi', 'π': 'pi', 'ρ': 'rho', 'σ': 'sigma', 'τ': 'tau', 'υ': 'upsilon', 'φ': 'phi', 'χ': 'chi', 'ψ': 'psi', 'ω': 'omega',
+  'Γ': 'Gamma', 'Δ': 'Delta', 'Θ': 'Theta', 'Λ': 'Lambda', 'Ξ': 'Xi', 'Π': 'Pi', 'Σ': 'Sigma', 'Φ': 'Phi', 'Ψ': 'Psi', 'Ω': 'Omega',
+  '⊕': 'oplus', '⊗': 'otimes', '∝': 'propto', '·': 'cdot', '×': 'times', '→': 'to', '←': 'leftarrow', '↔': 'leftrightarrow', '⇒': 'Rightarrow', '≤': 'leq', '≥': 'geq', '≠': 'neq', '≈': 'approx', '∞': 'infty', '∈': 'in', '∀': 'forall', '∃': 'exists', '¬': 'neg', '∧': 'wedge', '∨': 'vee', '⋮': 'vdots', '⋯': 'cdots', '…': 'ldots', '√': 'surd' };
+const UNI_RE = new RegExp('[' + Object.keys(UNI).join('') + ']', 'g');
+const uniMath = m => m.replace(UNI_RE, (c, i) => '\\' + UNI[c] + (/[A-Za-z]/.test(m[i + 1] || '') ? ' ' : '')).replace(/−/g, '-');
+const uniText = t => t.replace(UNI_RE, c => `$\\${UNI[c]}$`).replace(/−/g, '-');
 const texEsc = t => t.replace(/[\\{}#%&_^~$]/g, c => ({ '\\': '\\textbackslash{}', '~': '\\textasciitilde{}', '^': '\\textasciicircum{}' }[c] || '\\' + c));
 /* label text → TeX: text escaped, $…$ kept, display maths as $\displaystyle …$, lines joined with \\ */
 function texText(t, ts) {
   const lines = [''];
   for (const p of mathParts(t || '')) {
-    if (p.m != null) { const m = innerEnv(p.m).replace(/\s*\n\s*/g, ' '); lines[lines.length - 1] += p.disp ? `$\\displaystyle ${m}$` : `$${m}$`; continue; }
-    p.t.split('\n').forEach((q, i) => { if (i) lines.push(''); lines[lines.length - 1] += texEsc(q); });
+    if (p.m != null) { const m = innerEnv(p.m).replace(/\s*\n\s*/g, ' '); lines[lines.length - 1] += p.disp ? `$\\displaystyle ${uniMath(m)}$` : `$${uniMath(m)}$`; continue; }
+    p.t.split('\n').forEach((q, i) => { if (i) lines.push(''); lines[lines.length - 1] += uniText(texEsc(q)); });
   }
   let s = lines.map(l => (ts && ts.under && l ? `\\underline{${l}}` : l)).join(' \\\\ ');
   if (ts && ts.vert && s) s = `\\fgvert{${s}}`;
@@ -4102,7 +4192,7 @@ function plainNode(n, w, h) {
   if (n.k === 'dot') return ['circle', 'inner sep=0pt', 'outer sep=0pt', `minimum size=${pd(n.w)}`, n.fill === 'none' ? 'draw' : `fill=${rgbOf(n.fill)}`];
   if (n.k === 'image') return ['inner sep=0pt', 'outer sep=0pt'];
   if (n.k === 'text') return ['inner sep=' + pd(1), 'outer sep=0pt', 'align=center', ...(lc(ts.color) !== '#1d1d1f' ? [`text=${rgbOf(ts.color)}`] : []), pFont(ts)];
-  o.push({ rect: 'rectangle', circle: 'ellipse', diamond: 'diamond', tri: 'isosceles triangle, isosceles triangle stretches' }[n.k]);
+  o.push({ rect: 'rectangle', circle: n.w === n.h ? 'circle' : 'ellipse', diamond: 'diamond', tri: 'isosceles triangle, isosceles triangle stretches' }[n.k]);
   if (n.k === 'tri') o.push('shape border rotate=' + ({ up: 90, down: 270, left: 180, right: 0 }[n.dir || 'up']));
   o.push(`minimum width=${pd(n.w)}`, `minimum height=${pd(n.h)}`, `inner sep=${pd(n.k === 'rect' ? 3 : 1)}`, 'outer sep=0pt', 'align=center');
   if ((n.k === 'rect' || n.k === 'diamond') && n.rad) o.push(`rounded corners=${pd(n.rad)}`);
@@ -4172,7 +4262,8 @@ function latexFor(onlySel, plain) {
     }
     for (const [sd, t] of olabs) {
       const lo = plain ? [`inner sep=${pd(2)}`, `label distance=${pd(1.5)}`, ts.color && lc(ts.color) !== '#1d1d1f' ? `text=${rgbOf(ts.color)}` : '', pFont(ELT)] : ['fg olabel', col('text', ts.color, '#1d1d1f')];
-      o.push(`label={[${plain ? S('olab', lo) : lo.filter(Boolean).join(', ')}]${OLP[sd]}:{${texText(t, ELT)}}}`);
+      const oa = n.oa?.[sd], where = oa == null ? OLP[sd] : String(Math.round(-oa));
+      o.push(`label={[${plain ? S('olab', lo) : lo.filter(Boolean).join(', ')}]${where}:{${texText(t, ELT)}}}`);
     }
     L.push(`\\node[${plain ? S(n.k, o) : o.filter(Boolean).join(', ')}] ${nm} at ${P(n.x, n.y)} {${body}};`);
   }
@@ -4231,12 +4322,12 @@ function latexFor(onlySel, plain) {
   }
   L.push(...post);
   if (plain) {
-    const libs = [...(ns.some(n => n.k === 'diamond' || n.k === 'tri' || n.k === 'circle') ? ['shapes.geometric'] : []), ...(es.some(e => e.head && e.head !== 'none' || e.tail && e.tail !== 'none') ? ['arrows.meta'] : []), ...(es.some(e => e.shape === 'wave' || e.shape === 'zig') ? ['decorations.pathmorphing'] : [])];
+    const libs = [...(ns.some(n => n.k === 'diamond' || n.k === 'tri' || n.k === 'circle' && n.w !== n.h) ? ['shapes.geometric'] : []), ...(es.some(e => e.head && e.head !== 'none' || e.tail && e.tail !== 'none') ? ['arrows.meta'] : []), ...(es.some(e => e.shape === 'wave' || e.shape === 'zig') ? ['decorations.pathmorphing'] : [])];
     const { defs, text } = plainStyles(L.map(l => l ? '  ' + l : '').join('\n'), uses);
     const cols = [...pCol].map(([h, n]) => `  \\definecolor{${n}}{HTML}{${h.slice(1).toUpperCase()}}`);
     const need = ['\\usepackage{tikz}', ...(libs.length ? [`\\usetikzlibrary{${libs.join(', ')}}`] : []), ...(imgs.length || ns.some(n => n.ts?.vert) ? ['\\usepackage{graphicx}'] : [])];
     const po = [`x=${PU}pt`, `y=-${PU}pt`, ...defs];
-    return { tex: `% Figura · needs ${need.join(' ')}\n\\begin{tikzpicture}[${po.length > 2 ? '\n  ' + po.join(',\n  ') : po.join(', ')}]\n${cols.length ? cols.join('\n') + '\n' : ''}${text}\n\\end{tikzpicture}`, imgs };
+    return { tex: `% Figura · needs ${need.join(' ')}\n${libs.length ? `\\usetikzlibrary{${libs.join(', ')}}\n` : ''}\\begin{tikzpicture}[${po.length > 2 ? '\n  ' + po.join(',\n  ') : po.join(', ')}]\n${cols.length ? cols.join('\n') + '\n' : ''}${text}\n\\end{tikzpicture}`, imgs };
   }
   return { tex: `% Figura -- needs \\usepackage{figura} (figura.sty: Export > figura.sty)\n\\begin{figura}\n${L.map(l => l ? '  ' + l : '').join('\n')}\n\\end{figura}`, imgs };
   } finally { pCol = null; }
@@ -4423,8 +4514,9 @@ function parseTikz(src) {
             let t = v.trim(); if (t[0] === '{' && t[t.length - 1] === '}') t = t.slice(1, -1).trim();
             if (t[0] === '[') t = t.slice(group(t, 0).end).trim();
             const c = splitTop(t, ':'), pos = c.length > 1 ? c[0].trim() : 'above', body = (c.length > 1 ? c.slice(1).join(':') : t).trim().replace(/^\{([\s\S]*)\}$/, '$1');
-            const sd = /^(above|north|90)$/.test(pos) ? 't' : /^(below|south|270|-90)$/.test(pos) ? 'b' : /^(left|west|180)$/.test(pos) ? 'l' : /^(right|east|0)$/.test(pos) ? 'r' : null;
-            const lt = texToText(body).text; if (sd && lt) { n.ol = n.ol || {}; n.ol[sd] = lt; }
+            let sd = /^(above|north)$/.test(pos) ? 't' : /^(below|south)$/.test(pos) ? 'b' : /^(left|west)$/.test(pos) ? 'l' : /^(right|east)$/.test(pos) ? 'r' : null, oa = null;
+            if (!sd && /^-?[\d.]+$/.test(pos)) { let a = -(+pos) % 360; if (a <= -180) a += 360; if (a > 180) a -= 360; sd = a > -45 && a <= 45 ? 'r' : a > 45 && a <= 135 ? 'b' : a > -135 && a <= -45 ? 't' : 'l'; if (a !== OL_ANG[sd] && !(sd === 'l' && a === -180)) oa = Math.round(a); }
+            const lt = texToText(body).text; if (sd && lt) { n.ol = n.ol || {}; n.ol[sd] = lt; if (oa != null) { n.oa = n.oa || {}; n.oa[sd] = oa; } }
           }
           else if (key === 'size') n.ts.size = +v;
           else if (key === 'bold') n.ts.bold = true;
@@ -4939,7 +5031,8 @@ for (const b of $$('#gridSeg button')) b.innerHTML = IC[b.dataset.g];
 $('#zUndo').onclick = undo; $('#zRedo').onclick = redo; $('#zFit').onclick = fit;
 $('#zIn').onclick = () => zoomAt(1.2, innerWidth / 2, innerHeight / 2); $('#zOut').onclick = () => zoomAt(1 / 1.2, innerWidth / 2, innerHeight / 2);
 $('#zPct').onclick = zoom100;
-$('#dock').addEventListener('click', e => { const b = e.target.closest('.tool'); if (b) setTool(b.dataset.tool, 'click'); });
+$('#dock').addEventListener('click', e => { const b = e.target.closest('.tool'); if (b) { setTool(b.dataset.tool, 'click'); if (e.detail) b.blur(); } });   // no focus left behind: Space (pan) would press it again
+document.querySelector('.top')?.addEventListener('click', e => { const b = e.target.closest('button'); if (b && e.detail) b.blur(); });
 $('#dock').addEventListener('contextmenu', e => { e.preventDefault(); dockMenu(e.clientX, e.clientY, e.target.closest('.tool')); });
 document.addEventListener('pointerdown', e => { if (subPeek && !e.target.closest('#sub, #dock')) { subPeek = false; drawSub(); } }, true);
 $('#dock').addEventListener('pointerdown', e => e.stopPropagation());
