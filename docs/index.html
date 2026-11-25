@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
-<link rel="stylesheet" href="guide.css?v=1">
+<link rel="stylesheet" href="guide.css?v=2">
 </head>
 <body>
 
@@ -22,6 +22,7 @@
   <div class="grow"></div>
   <button class="search-btn" id="search" aria-label="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><span>Search</span><kbd>⌘K</kbd></button>
   <div class="plat" role="group" aria-label="Keyboard"><i></i><button data-p="mac">Mac</button><button data-p="win">Windows</button></div>
+  <button class="icon-btn lang-btn" id="lang" aria-label="Language"></button>
   <button class="icon-btn" id="theme" aria-label="Theme"></button>
   <a class="icon-btn" data-repo target="_blank" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.26-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.3 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2.2z"/></svg></a>
   <a class="open-app" data-app target="_blank" rel="noopener">Open Figura</a>
@@ -563,6 +564,508 @@
   </table></div>
 </article>
 
+<!-- ================= 中文 ================= -->
+<article data-page="home" lang="zh" data-group="开始" data-title="简介">
+  <div class="hero">
+    <h1>Figura</h1>
+    <p class="lead">在浏览器里画各种图：自动机、交换图、电路、几何作图、ZX 演算。画一次，就能把干净的 TikZ 代码直接粘进论文。</p>
+  </div>
+  <div data-art></div>
+  <div class="cta">
+    <a class="btn pri" data-app target="_blank" rel="noopener">打开 Figura</a>
+    <a class="btn sec" href="#/start">快速上手</a>
+  </div>
+
+  <h2>能做什么</h2>
+  <div class="feats">
+    <div class="feat"><a href="#/shapes">随文字伸缩的图形</a><p>圆、方框、菱形、三角形、点和图片。写进去的字多了图形会变大，删掉又缩回原样。</p></div>
+    <div class="feat"><a href="#/text">处处可写公式</a><p>图形、标签、连线上都能写 <code>$…$</code>、<code>\[…\]</code> 和 <code>align</code>，字体与论文一致。</p></div>
+    <div class="feat"><a href="#/lines">各式连线</a><p>弧线、贝塞尔曲线、折线；双线、波浪线、锯齿线；多种箭头、自环、射线，标签可随意拖动。</p></div>
+    <div class="feat"><a href="#/wiring">快速连线</a><p>一键多对一、一笔串起多个图形、平行连线，端口放在哪里就停在哪里。</p></div>
+    <div class="feat"><a href="#/geometry">几何作图</a><p>中点、垂线、交点、圆规画圆，作出的对象会跟着原来的点一起动。</p></div>
+    <div class="feat"><a href="#/tikz">TikZ 导入导出</a><p>导出的代码只需 <code>\usepackage{tikz}</code> 就能编译，也能把 TikZ 粘回来接着改。</p></div>
+  </div>
+
+  <h2>无需安装，无需注册</h2>
+  <p>Figura 只是一个网页。画的内容会随时保存在浏览器里，加载完成后断网也能用。鼠标、触控板、手写笔、手指都可以操作。</p>
+  <p>它的姊妹项目是 <a href="https://github.com/zhoujasper/ZX-Draw" target="_blank" rel="noopener">ZX Draw</a>，两者外观和操作习惯基本一致。</p>
+</article>
+
+<article data-page="start" lang="zh" data-group="开始" data-title="快速上手">
+  <h1>快速上手</h1>
+  <p class="lead">一分钟画出第一张图，顺便认识一下界面。</p>
+
+  <h2>第一张图</h2>
+  <ol class="steps">
+    <li>按 <kbd>O</kbd>，在画布上相隔一段距离点两下，得到两个圆。</li>
+    <li>分别双击两个圆，输入 <code>$q_0$</code> 和 <code>$q_1$</code>。写完按 <kbd>Esc</kbd> 或点空白处。</li>
+    <li>按 <kbd>E</kbd> 切到连线工具，从一个圆拖到另一个圆。双击这条线写上标签。</li>
+    <li>按 <kbd>Mod</kbd> <kbd>S</kbd>，停在 <strong>TikZ</strong> 页，点 <strong>Copy</strong>，粘进你的 <code>.tex</code> 文件。</li>
+  </ol>
+
+  <h2>界面</h2>
+  <div class="tbl"><table>
+    <tr><th>位置</th><th>作用</th></tr>
+    <tr><td>工具栏</td><td>底部的一排工具。拖动它的把手可以放到左边或右边；双击把手依次切换位置。</td></tr>
+    <tr><td>工具行</td><td>选中某个工具时，从工具栏弹出的一小排选项：填充、边框、箭头、尺寸等。</td></tr>
+    <tr><td>样式栏</td><td>再点一下已选中的对象（或右键它），上方会出现两行样式栏：颜色、边框、文字、图层、对齐。</td></tr>
+    <tr><td>页面</td><td>顶部的标签页。每页有自己的图、视图和锁定状态。</td></tr>
+    <tr><td>右上角</td><td>网格开关、打开 / 导出、设置、帮助。</td></tr>
+    <tr><td>底部两角</td><td>一边是锁定和缩放，另一边是小地图。</td></tr>
+  </table></div>
+
+  <h2>移动视图</h2>
+  <ul>
+    <li><strong>平移</strong>：按住 <kbd>Space</kbd> 拖动，或用抓手工具 <kbd>H</kbd>，或双指滑动。</li>
+    <li><strong>缩放</strong>：<kbd>Mod</kbd> + 滚轮、双指捏合，或 <kbd>=</kbd> 和 <kbd>−</kbd>。<kbd>F</kbd> 让所有内容铺满屏幕。</li>
+    <li><strong>小地图</strong>：在里面点击或拖动即可跳转。</li>
+  </ul>
+
+  <h2>选择</h2>
+  <ul>
+    <li>单击选中，<kbd>Shift</kbd> + 单击加选，在空白处拖出框选。</li>
+    <li>再按一次 <kbd>V</kbd> 把框选换成<strong>套索</strong>；拖动时按住 <kbd>Alt</kbd> 临时切换一次。</li>
+    <li><kbd>Mod</kbd> <kbd>A</kbd> 全选本页。</li>
+  </ul>
+
+  <h2>在手机上</h2>
+  <p>工具栏固定在底部，面板以底部弹层打开。点按选择，拖动移动，双指缩放；在任意位置长按，出现的就是电脑上右键的菜单。</p>
+
+  <p class="note">在 Figura 里随时按 <kbd>?</kbd> 打开内置指南，每个手势都有循环演示动画。</p>
+</article>
+
+<article data-page="shapes" lang="zh" data-group="绘图" data-title="图形">
+  <h1>图形</h1>
+  <p class="lead">圆、方框、三角形、菱形和点，画法和常见设计软件一样。</p>
+
+  <h2>画一个图形</h2>
+  <div class="tbl"><table>
+    <tr><th>工具</th><th>按键</th></tr>
+    <tr><td>圆</td><td><kbd>O</kbd></td></tr>
+    <tr><td>方框</td><td><kbd>R</kbd></td></tr>
+    <tr><td>三角形</td><td><kbd>Y</kbd></td></tr>
+    <tr><td>菱形</td><td><kbd>D</kbd></td></tr>
+    <tr><td>点</td><td><kbd>P</kbd></td></tr>
+  </table></div>
+  <p>单击放一个默认大小的图形，或拖动画出它的范围。拖动时：</p>
+  <ul>
+    <li><kbd>Shift</kbd> 保持比例：正方形、正圆、正菱形、等边三角形。</li>
+    <li><kbd>Alt</kbd> 从中心向外画。</li>
+    <li><kbd>Space</kbd> 在松手前移动图形位置。</li>
+  </ul>
+  <p>新图形会沿用你上次对同类图形用的样式，所以画一排状态不用逐个改样式。</p>
+
+  <h2>缩放与旋转</h2>
+  <p>选中的图形有八个控制点和一个旋转钮。缩放时 <kbd>Shift</kbd> 保持比例，<kbd>Alt</kbd> 以中心缩放。旋转会轻轻吸附到 15° 的倍数；按住 <kbd>Shift</kbd> 则按 15° 步进。<kbd>[</kbd> 和 <kbd>]</kbd> 每次转 15°。</p>
+
+  <h2>填充与边框</h2>
+  <p>工具行设定新图形的样式，样式栏修改已选中的图形。两者都提供：</p>
+  <ul>
+    <li><strong>填充</strong>：常用色、无填充，或从取色器任选（方块、色轮、滑条三种视图；可直接输入 <code>#hex</code>、<code>rgb()</code>、<code>hsl()</code> 或 CSS 颜色名）。</li>
+    <li><strong>边框</strong>：粗细，实线 / 虚线 / 点线，双线，颜色或无边框。</li>
+    <li><strong>圆角</strong>：方框圆角，可输入精确半径。</li>
+    <li><strong>三角形朝向</strong>和<strong>菱形形状</strong>（正、宽、高）。</li>
+  </ul>
+  <p class="note">右键任意常用色、粗细或样式预设，可以修改、移动或删除它。每行末尾的 <strong>+</strong> 会把当前样式存成新预设。</p>
+
+  <h2>点</h2>
+  <p>点是小实心圆，用作图的顶点或几何中的点。单击放一个，会吸附到网格。尺寸预设在工具行里；选中一个点后还能精确调整大小。</p>
+
+  <h2>移动与复制</h2>
+  <ul>
+    <li>拖动即可移动。开着网格时图形中心会吸附；自由模式下边缘和中心对齐时会出现参考线。</li>
+    <li><kbd>Alt</kbd> + 拖动会留下一份副本。<kbd>Mod</kbd> <kbd>D</kbd> 原地复制。</li>
+    <li>方向键微调位置。<kbd>W</kbd> 交换两个选中的图形，各自接管对方的连线。</li>
+  </ul>
+</article>
+
+<article data-page="text" lang="zh" data-group="绘图" data-title="文字与公式">
+  <h1>文字与公式</h1>
+  <p class="lead">在图形里、图形旁、连线上或画布任意位置写字，支持 LaTeX 公式。</p>
+
+  <h2>输入文字</h2>
+  <ul>
+    <li><strong>图形内</strong>：双击它，或选中后按 <kbd>Enter</kbd>。图形会随文字变大。</li>
+    <li><strong>画布上</strong>：双击空白处，或用文字工具 <kbd>T</kbd>。没写内容的文字会被自动删除。</li>
+    <li><strong>格式</strong>：<kbd>Mod</kbd> <kbd>B</kbd>、<kbd>I</kbd>、<kbd>U</kbd>；字号和颜色在样式栏；竖排在文字面板里。</li>
+  </ul>
+
+  <h2>公式</h2>
+  <p>美元符号之间的内容在画布上用 KaTeX 排版，导出时使用与 LaTeX 相同的字体。</p>
+  <div class="tbl"><table>
+    <tr><th>写法</th><th>用途</th></tr>
+    <tr><td><code>$x^2$</code> 或 <code>\(x^2\)</code></td><td>行内公式</td></tr>
+    <tr><td><code>$$…$$</code> 或 <code>\[…\]</code></td><td>行间公式</td></tr>
+    <tr><td><code>\begin{align}…\end{align}</code></td><td>多行对齐（也支持 <code>gather</code>、<code>equation</code>）</td></tr>
+  </table></div>
+  <p>直接输入的 π、→ 等符号导出时会变成 <code>\pi</code>、<code>\to</code>，pdflatex 不会因此报错。</p>
+
+  <h2>图形外的标签</h2>
+  <p>在图形某条边的外侧附近双击，就能在那里写标签；也可以用样式栏里的标签按钮。把标签绕着图形拖到任意角度，靠近某条边的中点时会吸附过去。导出 TikZ 时角度会保留。</p>
+
+  <h2>连线上的标签</h2>
+  <p>在连线上想放标签的位置双击即可输入。沿着线拖动标签可改变位置（会吸附到中点），横向拖动可放到线的一侧、线上或另一侧。</p>
+</article>
+
+<article data-page="lines" lang="zh" data-group="绘图" data-title="连线与箭头">
+  <h1>连线与箭头</h1>
+  <p class="lead">连线工具 <kbd>E</kbd> 可以连接两个图形，也可以从图形连到空白处，或在两个自由点之间画线。</p>
+
+  <h2>画一条线</h2>
+  <ul>
+    <li><strong>拖动</strong>：从一个图形拖到另一个图形，或拖到空白处得到一个自由端点。</li>
+    <li><strong>点两下</strong>：先点一个图形或位置，再点第二个。同一个图形点两次就是自环。</li>
+    <li><strong>悬停圆点</strong>：用选择工具悬停在图形上，各边会出现小圆点。拖动圆点开始连线；拖到空白处松手，或直接单击圆点，会生成一个相连的同款图形。</li>
+  </ul>
+
+  <h2>路径</h2>
+  <div class="fig">
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 40Q38 0 68 40"/></svg>弧线</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 42C14 4 62 44 68 6"/></svg>贝塞尔</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 42C38 42 38 6 68 6"/></svg>S 形</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 42H38V6H68"/></svg>折线</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 42H30a8 8 0 0 0 8-8V14a8 8 0 0 1 8-8h22"/></svg>圆角折线</figure>
+  </div>
+  <p>选中连线会显示控制点：拖动弧线中间改变弯曲度，拖动贝塞尔曲线的两个方形控制点，或拖动折线的转折处。<strong>拉直</strong>和<strong>反向</strong>在样式栏里。</p>
+
+  <h2>线型</h2>
+  <div class="fig">
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 24h60"/></svg>实线</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 24h60" stroke-dasharray="6 4"/></svg>虚线</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 21h60M8 27h60"/></svg>双线</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 24c3-7 6-7 9 0s6 7 9 0 6-7 9 0 6 7 9 0 6-7 9 0 6 7 9 0h6"/></svg>波浪线</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 24l4.5-6 9 12 9-12 9 12 9-12 9 12 4.5-6h6"/></svg>锯齿线</figure>
+  </div>
+  <p>任何线型都能搭配任何路径和箭头。粗细、虚线样式和颜色都有可编辑的预设，用法和图形样式相同。</p>
+
+  <h2>箭头</h2>
+  <p>两端各自设置箭头：无、普通箭头、实心、空心三角、双箭头、实心圆点、空心圆点、竖杠、钩子或射线。工具行里有常用组合（箭头、双向、继承、映射到等）；⋯ 按钮可为每一端选择全部箭头样式。</p>
+  <p><strong>射线</strong>端会越过端点继续延伸：在画布上一直画到边缘，导出时延伸一个网格步长后渐隐。</p>
+
+  <h2>自环</h2>
+  <p>用连线工具在同一个图形上点两次。Figura 会挑一个空闲的方向；绕着图形拖动自环即可改变位置。</p>
+
+  <h2>移动连线端点</h2>
+  <p>选中一个图形后，它的每条连线与它相接处都有一个圆点。沿轮廓拖动、拖到另一个图形上，或拖到空白处使该端变成自由端点。</p>
+</article>
+
+<article data-page="wiring" lang="zh" data-group="绘图" data-title="端口与快速连线">
+  <h1>端口与快速连线</h1>
+  <p class="lead">端点放在哪里就停在哪里，还有一次画多条线的方法。</p>
+
+  <h2>端口</h2>
+  <p>方框、三角形、菱形上的每个连线端点都落在某条<strong>边</strong>上，图形移动后也不会换边。同一条边上的端点均匀分布；一条边太挤时图形会自动变大。菱形的连线接在顶点上。</p>
+  <p>右键图形可以选择端口的排列方式：<strong>均匀分布</strong>、<strong>挤到两端</strong>，或<strong>全部在中间</strong>。</p>
+
+  <h3>沿线相接</h3>
+  <p>圆默认不用端口：连线指向圆心，在与轮廓相交的地方接上，正是自动机里常见的样子。每个图形都可以在样式栏或右键菜单（<em>Lines meet</em>）里切换：沿线相接，或固定端口。</p>
+
+  <h2>多对一</h2>
+  <ol class="steps">
+    <li>选中两个或更多图形。</li>
+    <li>切到连线工具，点击目标图形，所有选中的图形都会连到它。</li>
+  </ol>
+  <ul>
+    <li><kbd>Shift</kbd> + 单击：保留这些源图形，继续连下一个目标。</li>
+    <li><kbd>Mod</kbd> + 单击：添加或移除一个源图形。</li>
+    <li>在选择工具下按住 <kbd>S</kbd>，松开前都是连线工具，选中的图形作为源，选一个也行。</li>
+  </ul>
+
+  <h2>串连与平行线</h2>
+  <ul>
+    <li><strong>一笔划过</strong>多个图形：按经过的顺序依次连起来。</li>
+    <li><strong>按住 <kbd>P</kbd></strong> 并点击目标：画平行线，每个源图形连到相同偏移位置上的图形。快速轻按 <kbd>P</kbd> 仍然是点工具。</li>
+    <li><strong>右键拖动</strong>：在连线工具里框选，不用切换工具就能挑选源图形。</li>
+  </ul>
+
+  <h2>查看连接关系</h2>
+  <p>选中图形后按住 <kbd>Mod</kbd> 片刻，与每个选中图形相连的图形会闪烁，每个选中图形一种颜色。</p>
+
+  <h2>删除连线中间的图形</h2>
+  <p>删除一个恰好有两条连线的图形时，两条线会合并成一条，方向保持不变。新画的直线如果碰到其他图形，会弯出刚好绕开的弧度。</p>
+</article>
+
+<article data-page="geometry" lang="zh" data-group="绘图" data-title="几何作图">
+  <h1>几何作图</h1>
+  <p class="lead">作出的对象始终成立：移动一个点，基于它作出的一切都会跟着动。</p>
+
+  <h2>作图</h2>
+  <p>先选中对象，再按快捷键，或右键从菜单里选。菜单只列出当前选择能做的操作。</p>
+  <div class="tbl"><table>
+    <tr><th>按键</th><th>作出</th><th>需要</th></tr>
+    <tr><td><kbd>M</kbd></td><td>中点</td><td>一条线，或两个点</td></tr>
+    <tr><td><kbd>J</kbd></td><td>垂足</td><td>一个点和一条线</td></tr>
+    <tr><td><kbd>B</kbd></td><td>垂直平分线</td><td>一条线，或两个点</td></tr>
+    <tr><td><kbd>N</kbd></td><td>平行线</td><td>一个点和一条线</td></tr>
+    <tr><td><kbd>X</kbd></td><td>交点</td><td>两条线、一条线和一个圆，或两个圆</td></tr>
+    <tr><td><kbd>U</kbd></td><td>对称点</td><td>一个点和一条线</td></tr>
+    <tr><td><kbd>Q</kbd></td><td>中心</td><td>一个图形</td></tr>
+  </table></div>
+  <p>作出的点是不能拖动的点；当原对象不再相交时它会变淡。菜单里的 <strong>Make free</strong> 可解除依赖。删除一个对象会一并删除基于它作出的对象。</p>
+
+  <h2>圆规</h2>
+  <p>按 <kbd>C</kbd>。在圆心按下并拖出半径，或先点圆心再点圆上一点。基于图形画出的圆会跟随这些图形。</p>
+
+  <h2>网格</h2>
+  <p>顶部的开关（或 <kbd>G</kbd>）在 点阵 → 半格 → 自由 之间切换。打开网格时，可以一步把所有不在格点上的对象吸附过去。</p>
+</article>
+
+<article data-page="pictures" lang="zh" data-group="绘图" data-title="图片">
+  <h1>图片</h1>
+  <p class="lead">把图片放到画布上，或放进图形里。</p>
+  <ul>
+    <li><strong>添加</strong>：图片工具 <kbd>I</kbd>、粘贴图片，或把文件拖到画布上。</li>
+    <li><strong>填充图形</strong>：把图片拖到图形上，或用图形样式栏里的图片按钮。</li>
+    <li><strong>裁剪</strong>：对图片而言，控制点移动的是画框，图片本身不动；拖动则在框内移动图片。对图形里的图片，拖动移动、滚轮缩放，图片始终铺满图形。</li>
+  </ul>
+  <p>过大的图片会缩到 1800 px。导出 TikZ 时每张图片对应一个 <code>\includegraphics</code>，裁剪好的 PNG 在导出窗口下载。</p>
+</article>
+
+<article data-page="pages" lang="zh" data-group="工作区" data-title="页面、图层与视图">
+  <h1>页面、图层与视图</h1>
+  <p class="lead">管理多张图，以及演示时的用法。</p>
+
+  <h2>页面</h2>
+  <ul>
+    <li>标签页旁的 <strong>+</strong> 新建页面。双击标签重命名；右键可复制、移动和关闭。</li>
+    <li>每一页都会自动保存在浏览器里。</li>
+  </ul>
+
+  <h2>锁定</h2>
+  <p>缩放栏旁的锁（<kbd>K</kbd>）会冻结当前页：拖动只会平移，什么都改不了。演示时很方便。</p>
+
+  <h2>图层与对齐</h2>
+  <div class="tbl"><table>
+    <tr><th>快捷键</th><th>操作</th></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>]</kbd></td><td>上移一层</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>[</kbd></td><td>下移一层</td></tr>
+    <tr><td><kbd>Shift</kbd> <kbd>Mod</kbd> <kbd>]</kbd></td><td>置于顶层</td></tr>
+    <tr><td><kbd>Shift</kbd> <kbd>Mod</kbd> <kbd>[</kbd></td><td>置于底层</td></tr>
+  </table></div>
+  <p>选中多个图形时，样式栏可以对齐它们（左、居中、右、上、中、下），三个及以上还能等距分布。</p>
+
+  <h2>激光笔</h2>
+  <p>共享屏幕时按 <kbd>L</kbd> 指点内容。<strong>Dot</strong> 是发光的指示点；<strong>Line</strong> 会留下逐渐消失的轨迹。再点一次工具可以切换。</p>
+</article>
+
+<article data-page="toolbar" lang="zh" data-group="工作区" data-title="自定义工具栏">
+  <h1>自定义工具栏</h1>
+  <p class="lead">只留常用的工具，再加上能一键画出你所需样式的按钮。</p>
+
+  <h2>布局</h2>
+  <p>Figura 自带三套工具栏，可在设置里或右键工具栏选择：</p>
+  <div class="tbl"><table>
+    <tr><th>布局</th><th>包含</th></tr>
+    <tr><td>General</td><td>所有内置工具。</td></tr>
+    <tr><td>ZX-calculus</td><td>Z、X spider，Hadamard 方框，导线点，方框，导线和 Hadamard 边。</td></tr>
+    <tr><td>Category theory</td><td>对象、箭头、单射 ↪、满射 ↠、虚线箭头、映射到 ↦、2-胞腔 ⇒ 和等号。</td></tr>
+  </table></div>
+  <p>修改内置布局时会自动生成你自己的副本，原布局始终保留。</p>
+
+  <h2>自定义按钮</h2>
+  <p>一个按钮保存一整套样式：图形的填充、边框、大小和初始文字，或连线的箭头、虚线和颜色。还可以给它设快捷键，在该布局下优先于内置快捷键。</p>
+  <ol class="steps">
+    <li>把一个图形或连线调成想要的样子，然后选中它。</li>
+    <li>右键工具栏，选 <strong>Add the selected look as a button</strong>。</li>
+    <li>在新按钮处于激活状态时再点一次，可以改名、设快捷键或细调样式。</li>
+  </ol>
+
+  <h2>编辑器</h2>
+  <p><strong>Customize</strong> 打开编辑器：拖动按钮调整顺序，把按钮拖出工具条即可隐藏，从下方一行拖入新按钮。内置工具会显示它工具行的各个部分，也可以隐藏或重新排序。</p>
+
+  <h2>分享</h2>
+  <p>把布局导出为 <code>.figtool</code> 文件，在另一台电脑导入，或发给合作者。导入不会覆盖你已有的布局。</p>
+
+  <h2>任意重新排序</h2>
+  <p>按住 <kbd>Mod</kbd> 拖动任意工具栏按钮、顶栏按钮、选项行或常用色，即可调整顺序，顺序会被记住。</p>
+
+  <h2>快捷键</h2>
+  <p>打开帮助（<kbd>?</kbd>）→ <strong>Shortcuts</strong>，点一个操作再按一个键即可。如果这个键已被占用，两者会互换。</p>
+</article>
+
+<article data-page="tikz" lang="zh" data-group="LaTeX 与文件" data-title="TikZ 导出">
+  <h1>TikZ 导出</h1>
+  <p class="lead">纯 TikZ 代码，只需 <code>\usepackage{tikz}</code> 就能编译。</p>
+
+  <h2>导出</h2>
+  <ol class="steps">
+    <li>按 <kbd>Mod</kbd> <kbd>S</kbd>（或导出按钮），停在 <strong>TikZ</strong> 页。</li>
+    <li>选择 <strong>Whole page</strong>（整页）或 <strong>Selection</strong>（选中部分）。</li>
+    <li>点 <strong>Copy</strong> 复制，或下载 <code>.tex</code> 文件。图里有图片的话，也一起下载。</li>
+  </ol>
+  <p class="note">对选中内容按 <kbd>Mod</kbd> <kbd>C</kbd>，它的 TikZ 代码也会同时放进剪贴板，可以直接粘到编辑器里。</p>
+
+  <h2>放进文档</h2>
+  <p>导出的代码开头有一行 <code>\usetikzlibrary</code>，只列出需要的库，所以粘进去就能用：</p>
+<pre><code class="tex">\documentclass{article}
+\usepackage{tikz}
+\usepackage{amsmath} % 标签里用到 align 等环境时需要
+
+\begin{document}
+% 把导出的代码粘在这里
+\end{document}</code></pre>
+  <p>导出的代码大致如下：</p>
+<pre><code class="tex">% Figura · needs \usepackage{tikz} \usetikzlibrary{arrows.meta}
+\usetikzlibrary{arrows.meta}
+\begin{tikzpicture}[
+  x=0.66667pt,
+  y=-0.66667pt,
+  oval/.style={…},
+  link/.style={…}]
+  \definecolor{fgInk}{HTML}{1D1D1F}
+  \node[oval] (a) at (0,0) {$q_0$};
+  \node[oval] (b) at (160,0) {$q_1$};
+  \draw[link] (a) to[bend left=20] node[lab] {$a$} (b);
+  ...
+\end{tikzpicture}</code></pre>
+  <p>第一行注明这段代码需要什么。多个图形或连线共用的选项会提取成开头的短样式（<code>oval</code>、<code>box</code>、<code>link</code>、<code>lab</code>…），颜色按名字只定义一次，图形都是真正的 TikZ 节点，手动修改也很方便。画布上 1 像素等于 ⅔ pt，y 轴朝下，与屏幕一致。</p>
+
+  <h2>导回 Figura</h2>
+  <p>把 TikZ 粘到画布上，或打开 <code>.tex</code> 文件，Figura 会读回来：节点、连线、弯曲、自环、标签、箭头、颜色（<code>red!30</code>、<code>rgb</code>、<code>\definecolor</code>）以及 <code>\tikzset</code> 里的样式。Figura 自己导出的代码能原样还原。</p>
+</article>
+
+<article data-page="sty" lang="zh" data-group="LaTeX 与文件" data-title="figura.sty">
+  <h1>figura.sty</h1>
+  <p class="lead">一个简短的样式文件，适合图很多的文档，也方便手写。</p>
+
+  <h2>准备</h2>
+  <p>从导出窗口（或代码仓库）下载 <code>figura.sty</code>，放在 <code>.tex</code> 文件旁边。下载的文件还会定义你自己的常用色。</p>
+<pre><code class="tex">\usepackage{figura}
+
+\begin{figura}            % 1 单位 = 画布上 1 像素，y 轴朝下
+  \node[fg box, fill=fgRose] (a) at (0,0)   {Hello};
+  \node[fg circle]           (b) at (160,0) {$q_0$};
+  \draw[fg line, ->] (a) -- node[fg label] {$f$} (b);
+  \draw[fg line, ->] (b) to[loop at=90] (b);
+\end{figura}</code></pre>
+  <p>在导出窗口选 <strong>figura.sty</strong> 页，就能得到这种更短的写法。</p>
+
+  <h2>选项</h2>
+  <div class="tbl"><table>
+    <tr><th>类别</th><th>选项</th></tr>
+    <tr><td>图形</td><td><code>fg box</code>、<code>fg circle</code>、<code>fg diamond</code>、<code>fg triangle</code>（+ <code>points down/left/right</code>）、<code>fg dot</code> 或 <code>fg dot=5</code>、<code>fg text</code>、<code>fg image</code></td></tr>
+    <tr><td>尺寸</td><td><code>w=80</code>、<code>h=40</code>、<code>r=6</code>（圆角半径）、<code>size=18</code>、<code>bold</code>、<code>italic</code>、<code>\fgvert{…}</code></td></tr>
+    <tr><td>边框</td><td><code>draw=fgBlue</code>、<code>lw=2.5</code>、<code>dashed</code>、<code>dotted</code>、<code>dashes={on}{off}</code>、<code>double border</code>、<code>draw=none</code></td></tr>
+    <tr><td>颜色</td><td><code>fill=fgSky</code>、<code>text=fgRed</code>，或任意十六进制：<code>fill hex=A04070</code>、<code>draw hex=…</code>、<code>text hex=…</code></td></tr>
+    <tr><td>连线</td><td><code>fg line</code> + <code>-></code>、<code>&lt;-></code>、<code>-{Triangle}</code>、<code>->></code>、<code>-{Circle}</code>、<code>-|</code>、<code>-{Hooks[right]}</code>；<code>bend left=20</code>、<code>loop at=90</code>、<code>wave</code>、<code>zigzag</code>、<code>double line</code></td></tr>
+    <tr><td>标签</td><td><code>node[fg label]</code>、<code>node[fg label, swap]</code>、<code>node[fg label on]</code>、<code>pos=0.3</code>；图形外 <code>label={[fg olabel]above:{…}}</code></td></tr>
+    <tr><td>整体</td><td><code>\begin{figura}[scale=1.2]</code>、<code>[unit=0.5pt]</code>、<code>[baseline=north]</code></td></tr>
+  </table></div>
+
+  <h2>颜色</h2>
+  <p>填充色：<code>fgRose</code>、<code>fgPeach</code>、<code>fgSand</code>、<code>fgMint</code>、<code>fgSky</code>、<code>fgLilac</code>、<code>fgStone</code>。线条与文字色：<code>fgInk</code>、<code>fgGrey</code>、<code>fgRed</code>、<code>fgOrange</code>、<code>fgGreen</code>、<code>fgBlue</code>、<code>fgViolet</code>、<code>fgPink</code>，以及 Figura 调色板里的其他颜色。</p>
+</article>
+
+<article data-page="files" lang="zh" data-group="LaTeX 与文件" data-title="图片与文件">
+  <h1>图片与文件</h1>
+  <p class="lead">导出窗口和文件夹按钮能做的所有事。</p>
+
+  <h2>导出窗口</h2>
+  <div class="tbl"><table>
+    <tr><th>标签页</th><th>得到</th></tr>
+    <tr><td>TikZ</td><td>纯 TikZ，复制或下载 <code>.tex</code>。见 <a href="#/tikz">TikZ 导出</a>。</td></tr>
+    <tr><td>figura.sty</td><td>更短的代码，用于加载了 <a href="#/sty">figura.sty</a> 的文档。</td></tr>
+    <tr><td>Image</td><td>PNG（可调倍率）或 SVG，整页或选中部分，透明或白底。公式使用 TeX 字体。</td></tr>
+    <tr><td>File</td><td>包含全部页面（或部分页面）的 <code>.figura</code> 文件。</td></tr>
+  </table></div>
+
+  <h2>打开</h2>
+  <p><kbd>Mod</kbd> <kbd>O</kbd> 或文件夹按钮可以打开 <code>.figura</code>、<code>.tex</code> 和 <code>.figtool</code> 文件。打开的页面会加在现有页面旁边，不会替换它们。也可以把文件直接拖进窗口。</p>
+
+  <h2>作品存在哪里</h2>
+  <p>页面会随时保存在当前浏览器里。要换电脑、换浏览器或做备份，请导出 <code>.figura</code> 文件。</p>
+  <p class="note warn">清除浏览器的网站数据会删掉保存的页面。重要的图请另存一份 <code>.figura</code> 文件。</p>
+</article>
+
+<article data-page="keys" lang="zh" data-group="参考" data-title="快捷键">
+  <h1>快捷键</h1>
+  <p class="lead">以下为默认设置。所有单键快捷键都可以在 帮助 → Shortcuts 中修改。</p>
+
+  <h2>工具</h2>
+  <div class="tbl"><table>
+    <tr><th>按键</th><th>工具</th></tr>
+    <tr><td><kbd>V</kbd></td><td>选择 · 再按：框选 ↔ 套索</td></tr>
+    <tr><td><kbd>H</kbd></td><td>抓手（或按住 <kbd>Space</kbd>）</td></tr>
+    <tr><td><kbd>O</kbd></td><td>圆</td></tr>
+    <tr><td><kbd>R</kbd></td><td>方框</td></tr>
+    <tr><td><kbd>Y</kbd></td><td>三角形</td></tr>
+    <tr><td><kbd>D</kbd></td><td>菱形</td></tr>
+    <tr><td><kbd>P</kbd></td><td>点 · 选中图形时按住：平行连线</td></tr>
+    <tr><td><kbd>T</kbd></td><td>文字（或双击画布）</td></tr>
+    <tr><td><kbd>E</kbd></td><td>连线 · 再按：线型</td></tr>
+    <tr><td><kbd>C</kbd></td><td>圆规</td></tr>
+    <tr><td><kbd>I</kbd></td><td>图片</td></tr>
+    <tr><td><kbd>L</kbd></td><td>激光笔</td></tr>
+    <tr><td><kbd>1</kbd> … <kbd>0</kbd></td><td>按顺序对应工具栏按钮</td></tr>
+  </table></div>
+
+  <h2>绘图</h2>
+  <div class="tbl"><table>
+    <tr><th>快捷键</th><th>操作</th></tr>
+    <tr><td><kbd>Shift</kbd> + 拖动</td><td>保持比例：正方形、正圆、正菱形、等边三角形</td></tr>
+    <tr><td><kbd>Alt</kbd> + 拖动</td><td>从中心画出或缩放</td></tr>
+    <tr><td>拖动时按 <kbd>Space</kbd></td><td>边画边移动图形</td></tr>
+  </table></div>
+
+  <h2>连线</h2>
+  <div class="tbl"><table>
+    <tr><th>快捷键</th><th>操作</th></tr>
+    <tr><td>按住 <kbd>S</kbd></td><td>把选中的图形连到点击的目标</td></tr>
+    <tr><td>点击目标</td><td>多对一（选中 2 个以上，连线工具）</td></tr>
+    <tr><td><kbd>Shift</kbd> + 单击</td><td>……并保留源图形继续连</td></tr>
+    <tr><td><kbd>Mod</kbd> + 单击</td><td>添加或移除一个源图形</td></tr>
+    <tr><td>一笔划过</td><td>连起笔画经过的每个图形</td></tr>
+    <tr><td>右键拖动</td><td>在连线工具中框选</td></tr>
+    <tr><td>点两下</td><td>在两个图形或位置间画线；同一图形点两次为自环</td></tr>
+    <tr><td>按住 <kbd>Mod</kbd></td><td>显示相连的图形</td></tr>
+  </table></div>
+
+  <h2>作图</h2>
+  <div class="tbl"><table>
+    <tr><th>按键</th><th>作出</th></tr>
+    <tr><td><kbd>M</kbd></td><td>中点</td></tr>
+    <tr><td><kbd>J</kbd></td><td>过点作线的垂线</td></tr>
+    <tr><td><kbd>B</kbd></td><td>垂直平分线</td></tr>
+    <tr><td><kbd>N</kbd></td><td>过点作平行线</td></tr>
+    <tr><td><kbd>X</kbd></td><td>交点</td></tr>
+    <tr><td><kbd>U</kbd></td><td>关于直线的对称点</td></tr>
+    <tr><td><kbd>Q</kbd></td><td>图形的中心</td></tr>
+  </table></div>
+
+  <h2>编辑</h2>
+  <div class="tbl"><table>
+    <tr><th>快捷键</th><th>操作</th></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>Z</kbd></td><td>撤销</td></tr>
+    <tr><td><kbd>Shift</kbd> <kbd>Mod</kbd> <kbd>Z</kbd></td><td>重做</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td><td>复制（含 TikZ）/ 剪切 / 粘贴</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>D</kbd></td><td>原地复制</td></tr>
+    <tr><td><kbd>Alt</kbd> + 拖动</td><td>拖动时复制</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>A</kbd></td><td>全选</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd></td><td>加粗 / 斜体 / 下划线</td></tr>
+    <tr><td>双击 · <kbd>Enter</kbd></td><td>在图形内写字、给连线加标签</td></tr>
+    <tr><td><kbd>W</kbd></td><td>交换两个选中的图形</td></tr>
+    <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>旋转 −15° / +15°</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>]</kbd> <kbd>[</kbd></td><td>上移一层 / 下移一层</td></tr>
+    <tr><td><kbd>Shift</kbd> <kbd>Mod</kbd> <kbd>]</kbd> <kbd>[</kbd></td><td>置顶 / 置底</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd></td><td>微调位置</td></tr>
+    <tr><td><kbd>⌫</kbd></td><td>删除</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>取消、取消选择、结束输入</td></tr>
+  </table></div>
+
+  <h2>视图与文件</h2>
+  <div class="tbl"><table>
+    <tr><th>快捷键</th><th>操作</th></tr>
+    <tr><td><kbd>G</kbd></td><td>网格：点阵 → 半格 → 自由</td></tr>
+    <tr><td><kbd>F</kbd></td><td>显示全部内容</td></tr>
+    <tr><td><kbd>=</kbd> <kbd>−</kbd></td><td>放大 / 缩小</td></tr>
+    <tr><td><kbd>Mod</kbd> + 滚轮 · 双指捏合</td><td>缩放</td></tr>
+    <tr><td><kbd>K</kbd></td><td>锁定 / 解锁当前页</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>S</kbd></td><td>导出</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>O</kbd></td><td>打开</td></tr>
+    <tr><td><kbd>?</kbd></td><td>帮助与快捷键</td></tr>
+  </table></div>
+</article>
+
 </main>
 <aside class="toc" id="toc" aria-label="On this page"></aside>
 </div>
@@ -574,6 +1077,6 @@
   </div>
 </div>
 
-<script src="guide.js?v=1"></script>
+<script src="guide.js?v=2"></script>
 </body>
 </html>
