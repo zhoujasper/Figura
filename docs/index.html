@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Figura Guide</title>
 <meta name="description" content="How to use Figura: draw diagrams in the browser and export clean TikZ for LaTeX.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235b5bd6'/%3E%3Ccircle cx='11' cy='20' r='5' fill='none' stroke='white' stroke-width='2'/%3E%3Crect x='17' y='6' width='9' height='9' rx='2' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M15 16.5 19 13' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='7' cy='8' r='4.2' fill='%23d6d8fb' stroke='%231d1d1f' stroke-width='1.6'/%3E%3Crect x='12.5' y='12.5' width='8.5' height='8.5' rx='2' fill='%23fde2c4' stroke='%231d1d1f' stroke-width='1.6'/%3E%3Cpath d='M10 11l3.4 3.4' stroke='%231d1d1f' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
-<link rel="stylesheet" href="guide.css?v=2">
+<link rel="stylesheet" href="guide.css?v=4">
 </head>
 <body>
 
 <header class="top">
   <button class="icon-btn menu-btn" id="menu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   <a class="brand" href="#/home">
-    <svg class="mark" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#5b5bd6"/><circle cx="11" cy="20" r="5" fill="none" stroke="#fff" stroke-width="2"/><rect x="17" y="6" width="9" height="9" rx="2" fill="none" stroke="#fff" stroke-width="2"/><path d="M15 16.5 19 13" stroke="#fff" stroke-width="2"/></svg>
+    <svg class="mark" viewBox="0 0 24 24"><circle cx="7" cy="8" r="4.2" fill="#d6d8fb" stroke="currentColor" stroke-width="1.6"/><rect x="12.5" y="12.5" width="8.5" height="8.5" rx="2" fill="#fde2c4" stroke="currentColor" stroke-width="1.6"/><path d="M10 11l3.4 3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
     Figura <small>Guide</small>
   </a>
   <div class="grow"></div>
@@ -52,7 +52,7 @@
       <circle class="draw" style="--l:1;--d:.55s" pathLength="1" cx="410" cy="95" r="30"/>
       <path class="draw" style="--l:1;--d:.9s" pathLength="1" d="M396 61C380 20 440 20 424 61"/>
       <path class="draw" style="--l:1;--d:.9s" pathLength="1" d="m417 54 7 7 2-10"/>
-      <rect class="draw" style="--l:1;--d:1s;stroke:var(--accent)" pathLength="1" x="540" y="62" width="150" height="66" rx="10" fill="var(--accent-soft)"/>
+      <rect class="draw" style="--l:1;--d:1s;stroke:var(--accent)" pathLength="1" x="540" y="62" width="174" height="66" rx="10" fill="var(--accent-soft)"/>
       <path class="draw" style="--l:1;--d:1.15s" pathLength="1" stroke-dasharray="1" d="M446 95h90"/>
       <path class="draw" style="--l:1;--d:1.15s" pathLength="1" d="m528 89 8 6-8 6"/>
       <g stroke="none" fill="currentColor" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="22">
@@ -62,7 +62,7 @@
         <text class="pop" style="--d:1s" x="252" y="152" font-size="19">b</text>
         <text class="pop" style="--d:1.05s" x="404" y="18" font-size="19">a</text>
       </g>
-      <text class="pop" style="--d:1.35s" x="556" y="101" stroke="none" fill="var(--accent-ink)" font-family="ui-monospace, Menlo, monospace" font-size="14">\begin{tikzpicture}</text>
+      <text class="pop" style="--d:1.35s" x="627" y="100" text-anchor="middle" stroke="none" fill="var(--accent-ink)" font-family="ui-monospace, Menlo, monospace" font-size="13" textLength="150" lengthAdjust="spacingAndGlyphs">\begin{tikzpicture}</text>
     </svg>
   </div>
   <div class="cta">
@@ -76,13 +76,13 @@
     <div class="feat"><a href="#/text">Maths everywhere</a><p><code>$…$</code>, <code>\[…\]</code> and <code>align</code> in shapes, labels and lines, set in the same fonts as your paper.</p></div>
     <div class="feat"><a href="#/lines">Lines of every kind</a><p>Arcs, Bézier curves, elbows; double, wavy or zigzag; many arrow heads, loops, rays, labels you can drag.</p></div>
     <div class="feat"><a href="#/wiring">Wire fast</a><p>Many to one in a click, a stroke through shapes, parallel lines, ports that stay where you put them.</p></div>
-    <div class="feat"><a href="#/geometry">Constructions</a><p>Midpoints, perpendiculars, intersections and compass circles that follow the points they are built on.</p></div>
+    <div class="feat"><a href="#/geometry">Constructions</a><p>Points on objects, constructions, transformations, live measurements and marks that follow the points they are built on.</p></div>
     <div class="feat"><a href="#/tikz">TikZ in, TikZ out</a><p>Export code that compiles with only <code>\usepackage{tikz}</code>, and paste TikZ back in to keep editing.</p></div>
   </div>
 
   <h2>No install, no account</h2>
   <p>Figura is a single web page. Your drawings are saved in your browser as you work, and the whole thing runs offline once it has loaded. It works with a mouse, a trackpad, a pen or your finger.</p>
-  <p>Its sibling project is <a href="https://github.com/zhoujasper/ZX-Draw" target="_blank" rel="noopener">ZX Draw</a>; the two share their look and most of their habits.</p>
+  <p>Its sibling project is <a href="https://zx-calculus.netlify.app/" target="_blank" rel="noopener">ZX Draw</a> (<a href="https://github.com/zhoujasper/ZX-Draw" target="_blank" rel="noopener">source</a>); the two share their look and most of their habits.</p>
 </article>
 
 <article data-page="start" data-group="Start" data-title="Getting started">
@@ -109,6 +109,7 @@
   </table></div>
 
   <h2>Moving around</h2>
+  <div class="demos"><figure data-demo="hand"><figcaption>Pan</figcaption></figure><figure data-demo="zoom"><figcaption>Zoom</figcaption></figure></div>
   <ul>
     <li><strong>Pan</strong>: hold <kbd>Space</kbd> and drag, use the hand tool <kbd>H</kbd>, or scroll with two fingers.</li>
     <li><strong>Zoom</strong>: <kbd>Mod</kbd> + scroll, pinch, or <kbd>=</kbd> and <kbd>−</kbd>. <kbd>F</kbd> fits everything on screen.</li>
@@ -116,6 +117,7 @@
   </ul>
 
   <h2>Selecting</h2>
+  <div class="demos one"><figure data-demo="select"></figure></div>
   <ul>
     <li>Click to select, <kbd>Shift</kbd>-click to add, drag on empty canvas for a box.</li>
     <li>Press <kbd>V</kbd> again to switch the box to a <strong>lasso</strong>; hold <kbd>Alt</kbd> while dragging to flip it for one go.</li>
@@ -126,6 +128,8 @@
   <p>The toolbar sits at the bottom and panels open as sheets. Tap to select, drag to move, pinch to zoom, and press and hold anywhere for the menu that a right-click gives on a computer.</p>
 
   <p class="note">Press <kbd>?</kbd> in Figura at any time for the built-in guide, with a looping demo for every gesture.</p>
+
+  <p>The app speaks English and Chinese: Settings → Language. Help → Full guide opens this guide in the same language.</p>
 </article>
 
 <!-- ================= DRAWING ================= -->
@@ -134,6 +138,7 @@
   <p class="lead">Circles, boxes, triangles, diamonds and dots, drawn like in any design tool.</p>
 
   <h2>Drawing a shape</h2>
+  <div class="demos"><figure data-demo="shapes"><figcaption>Click or drag</figcaption></figure><figure data-demo="prop"><figcaption><kbd>Shift</kbd> in proportion</figcaption></figure><figure data-demo="centre"><figcaption><kbd>Alt</kbd> from the centre</figcaption></figure><figure data-demo="spmove"><figcaption><kbd>Space</kbd> move while drawing</figcaption></figure></div>
   <div class="tbl"><table>
     <tr><th>Tool</th><th>Key</th></tr>
     <tr><td>Circle</td><td><kbd>O</kbd></td></tr>
@@ -151,6 +156,7 @@
   <p>A new shape takes the look you last used for that kind, so a row of states needs no restyling.</p>
 
   <h2>Resize and rotate</h2>
+  <div class="demos one"><figure data-demo="rotate"></figure></div>
   <p>A selected shape shows eight handles and a rotate knob. <kbd>Shift</kbd> keeps proportions while resizing, <kbd>Alt</kbd> resizes around the centre. Rotation is drawn softly to multiples of 15°; with <kbd>Shift</kbd> it steps. <kbd>[</kbd> and <kbd>]</kbd> rotate by 15°.</p>
 
   <h2>Fill and border</h2>
@@ -164,14 +170,19 @@
   <p class="note">Right-click any quick colour, width or style preset to edit, move or remove it. The <strong>+</strong> at the end of a row keeps the current look as a new preset.</p>
 
   <h2>Dots</h2>
+  <div class="demos one"><figure data-demo="dot"></figure></div>
   <p>Dots are small filled circles for graph vertices and geometry. Click to place one, snapped to the grid. Their sizes are presets in the tool row; a selected dot has an exact size stepper.</p>
 
   <h2>Moving and copying</h2>
+  <div class="demos"><figure data-demo="dup"><figcaption><kbd>Alt</kbd> + drag: copy</figcaption></figure><figure data-demo="swap"><figcaption><kbd>W</kbd> swap two shapes</figcaption></figure></div>
   <ul>
     <li>Drag to move. On the grid the shape's centre snaps; in free mode guides show when edges and centres line up.</li>
     <li><kbd>Alt</kbd> + drag leaves a copy behind. <kbd>Mod</kbd> <kbd>D</kbd> duplicates.</li>
     <li>Arrow keys nudge. <kbd>W</kbd> swaps two selected shapes, each taking over the other's lines.</li>
   </ul>
+
+  <h2>Logic gates</h2>
+  <p>The gate tool (<kbd>A</kbd>) draws AND, NAND, OR, NOR, XOR, XNOR, NOT, a buffer and an inverted-input buffer; pick the type in its bar. Gates work like any shape: lines land on their input and output leads, and they export to TikZ.</p>
 </article>
 
 <article data-page="text" data-group="Drawing" data-title="Text and maths">
@@ -186,6 +197,7 @@
   </ul>
 
   <h2>Maths</h2>
+  <div class="demos one"><figure data-demo="text"></figure></div>
   <p>Anything between dollars is typeset with KaTeX on the canvas and in the same fonts as LaTeX on export.</p>
   <div class="tbl"><table>
     <tr><th>Write</th><th>For</th></tr>
@@ -207,6 +219,7 @@
   <p class="lead">The connector <kbd>E</kbd> draws lines between shapes, from shapes to empty space, or between two free points.</p>
 
   <h2>Drawing a line</h2>
+  <div class="demos one"><figure data-demo="wire"></figure></div>
   <ul>
     <li><strong>Drag</strong> from a shape to another shape, or into empty space for a loose end.</li>
     <li><strong>Click, click</strong>: click a shape or a spot, then a second one. The same shape twice makes a self-loop.</li>
@@ -214,6 +227,7 @@
   </ul>
 
   <h2>Paths</h2>
+  <div class="demos one"><figure data-demo="route"></figure></div>
   <div class="fig">
     <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 40Q38 0 68 40"/></svg>Arc</figure>
     <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 42C14 4 62 44 68 6"/></svg>Bézier</figure>
@@ -234,6 +248,7 @@
   <p>Any style goes with any path and any arrow head. Width, dash pattern and colour have editable presets like the shape styles.</p>
 
   <h2>Arrow heads</h2>
+  <div class="demos one"><figure data-demo="ray"></figure></div>
   <p>Each end has its own head: none, arrow, filled, open triangle, double, dot, open dot, bar, hook or ray. The tool row offers common pairs (arrow, both ways, inheritance, maps-to, …); the ⋯ button opens every head for each end.</p>
   <p>A <strong>ray</strong> end runs on past its point; on the canvas it goes to the edge, in exports it fades out after one grid step.</p>
 
@@ -241,6 +256,7 @@
   <p>Click the same shape twice with the connector. Figura picks a free side; drag the loop round the shape to move it.</p>
 
   <h2>Moving a line's ends</h2>
+  <div class="demos one"><figure data-demo="ports"></figure></div>
   <p>With a shape selected, a dot sits where each of its lines meets it. Drag a dot along the outline, onto another shape, or off into empty space to free that end.</p>
 </article>
 
@@ -249,6 +265,7 @@
   <p class="lead">Line ends that stay put, and ways to draw many lines at once.</p>
 
   <h2>Ports</h2>
+  <div class="demos one"><figure data-demo="ports"></figure></div>
   <p>Every line end on a box, triangle or diamond sits on a <strong>side</strong> and stays there when shapes move. Ends on one side spread out evenly, and a side that gets crowded makes the shape grow. Diamonds wire to their corners.</p>
   <p>Right-click a shape to choose how its ports are laid out: <strong>evenly</strong>, <strong>packed to the ends</strong> of each side, or <strong>all in the middle</strong>.</p>
 
@@ -256,6 +273,7 @@
   <p>Circles work the other way by default: lines aim at the centre and meet the outline where they cross it, as you expect in an automaton. Each shape can be switched in the style bar or its menu (<em>Lines meet</em>): along the line, or fixed ports.</p>
 
   <h2>Many to one</h2>
+  <div class="demos one"><figure data-demo="fan"></figure></div>
   <ol class="steps">
     <li>Select two or more shapes.</li>
     <li>Pick the connector and click the target. Every selected shape is wired to it.</li>
@@ -267,6 +285,7 @@
   </ul>
 
   <h2>Chains and parallel lines</h2>
+  <div class="demos"><figure data-demo="chain"><figcaption>Drag through</figcaption></figure><figure data-demo="par"><figcaption>Hold <kbd>P</kbd></figcaption></figure><figure data-demo="rdrag"><figcaption>Right-drag</figcaption></figure></div>
   <ul>
     <li><strong>Drag through</strong> several shapes with the connector: they are wired in the order you pass them.</li>
     <li><strong>Hold <kbd>P</kbd></strong> with shapes selected and click a target: parallel lines, each source to the shape at the same offset. A quick tap of <kbd>P</kbd> is still the dot tool.</li>
@@ -274,35 +293,76 @@
   </ul>
 
   <h2>Seeing connections</h2>
+  <div class="demos one"><figure data-demo="nb"></figure></div>
   <p>Hold <kbd>Mod</kbd> for a moment with shapes selected: the shapes wired to each one pulse, one colour per selected shape.</p>
 
   <h2>Deleting a shape in a wire</h2>
   <p>Delete a shape that has exactly two lines and they join into one, keeping the direction. A new straight line bends just enough to miss shapes in its way.</p>
+
+  <p>Holding <kbd>S</kbd> (connect) or <kbd>P</kbd> (parallel lines) with shapes selected works in the shape, dot and text tools too; you are back in that tool when you let go.</p>
 </article>
 
 <article data-page="geometry" data-group="Drawing" data-title="Geometry">
   <h1>Geometry</h1>
-  <p class="lead">Constructions that stay true: move a point and everything built on it follows.</p>
+  <p class="lead">Constructions that stay true, in the spirit of a dynamic geometry program: move a point and everything built on it follows.</p>
+
+  <h2>Points</h2>
+  <div class="demos one"><figure data-demo="onpt"></figure></div>
+  <p>With the Dot tool (<kbd>P</kbd>), click empty canvas for a free point, a line or circle for a point that stays on it, or the spot where two of them cross for their intersection. A point on an object slides along it when dragged. Turn on <strong>Name new points</strong> in Settings to label new points A, B, C…; <strong>Name the points</strong> in the menu labels the selected ones.</p>
+
+  <p>Click the loose end of a line (or where several loose ends meet) and the new point becomes that end, so the corner is a real vertex. In the <b>Geometry</b> toolbar layout (Settings → Toolbar) segments, rays and lines always end in points.</p>
 
   <h2>Constructions</h2>
-  <p>Select the objects, then press the key or right-click and pick from the menu, which lists only what the selection allows.</p>
+  <div class="demos one"><figure data-demo="construct"></figure></div>
+  <p>Select the objects (in order, with <kbd>Shift</kbd>, where order matters), then right-click, use the compass button in the style bar, or press a key. The menu lists only what the selection allows.</p>
   <div class="tbl"><table>
     <tr><th>Key</th><th>Builds</th><th>From</th></tr>
+    <tr><td></td><td>Segment · ray · line</td><td>two points (3+ points: closed segments)</td></tr>
     <tr><td><kbd>M</kbd></td><td>Midpoint</td><td>a line, or two points</td></tr>
-    <tr><td><kbd>J</kbd></td><td>Perpendicular foot</td><td>a point and a line</td></tr>
+    <tr><td></td><td>Centroid · orthocentre · circumcentre · incentre · circumcircle</td><td>a triangle: three points, or box-select it with its sides</td></tr>
+    <tr><td></td><td>Midpoints of the sides</td><td>two or more segments</td></tr>
     <tr><td><kbd>B</kbd></td><td>Perpendicular bisector</td><td>a line, or two points</td></tr>
+    <tr><td><kbd>J</kbd></td><td>Perpendicular line</td><td>a point and a line</td></tr>
     <tr><td><kbd>N</kbd></td><td>Parallel line</td><td>a point and a line</td></tr>
+    <tr><td></td><td>Foot of the perpendicular</td><td>a point and a line</td></tr>
+    <tr><td></td><td>Angle bisector</td><td>three points, vertex second</td></tr>
     <tr><td><kbd>X</kbd></td><td>Intersection</td><td>two lines, a line and a circle, or two circles</td></tr>
-    <tr><td><kbd>U</kbd></td><td>Reflection</td><td>a point and a line</td></tr>
+    <tr><td></td><td>Circle by centre and point · through three points</td><td>two points · three points</td></tr>
+    <tr><td></td><td>Arc on a circle · through three points</td><td>centre, start, end · three points</td></tr>
+    <tr><td></td><td>Tangents</td><td>a point and a circle</td></tr>
+    <tr><td></td><td>Polygon interior</td><td>three or more points</td></tr>
     <tr><td><kbd>Q</kbd></td><td>Centre</td><td>a shape</td></tr>
   </table></div>
-  <p>Built points are dots and cannot be dragged; they fade out when their objects stop meeting. <strong>Make free</strong> in the menu cuts the tie. Deleting an object deletes what was built on it.</p>
+  <p>Lines and rays built this way run on forever. Built objects cannot be dragged (points on objects can slide); they fade out when their objects stop meeting. <strong>Make free</strong> cuts the tie. Deleting an object deletes what was built on it. Every key can be set in Shortcuts.</p>
+
+  <h2>Transformations</h2>
+  <div class="demos one"><figure data-demo="xform"></figure></div>
+  <p>First mark what the transformation needs: a point → <strong>Mark as centre</strong>, a line → <strong>Mark as mirror</strong>, two points → <strong>Mark vector</strong>. Marks show dashed. Then select shapes, points and lines and pick <strong>Rotate…</strong> (degrees, counter-clockwise), <strong>Dilate…</strong> (a factor such as 2, ½ or −1), <strong>Reflect</strong> or <strong>Translate</strong>. The image keeps the look of the original, names get a prime (A → A′), and it follows the original. A point and one line selected together reflect without marking (<kbd>U</kbd>).</p>
+
+  <h2>Measure and mark</h2>
+  <div class="demos one"><figure data-demo="measure"></figure></div>
+  <div class="tbl"><table>
+    <tr><th>Select</th><th>Measure</th></tr>
+    <tr><td>two points</td><td>Distance</td></tr>
+    <tr><td>a line</td><td>Length · slope</td></tr>
+    <tr><td>three points, vertex second</td><td>Angle</td></tr>
+    <tr><td>a circle</td><td>Radius · circumference · area</td></tr>
+    <tr><td>a polygon interior</td><td>Area · perimeter</td></tr>
+    <tr><td>a point</td><td>Coordinates (grid steps, y up)</td></tr>
+  </table></div>
+  <p>A measurement is a text that updates as you drag, and can be moved anywhere. Lengths are in cm as they come out in LaTeX. Marks: three points (or two lines sharing an end) → <strong>Angle mark</strong> or <strong>Right-angle mark</strong>; a selected mark switches between one, two or three arcs and the square. Selected segments get <strong>Equal marks</strong>: one, two or three ticks.</p>
 
   <h2>Compass</h2>
+  <div class="demos one"><figure data-demo="compass"></figure></div>
   <p>Press <kbd>C</kbd>. Press on a centre and drag out the radius, or click the centre and then a point on the circle. A circle built on shapes follows them.</p>
+
+  <h2>In LaTeX</h2>
+  <p>Polygon interiors become <code>\fill</code> paths with opacity, arcs and angle marks Bézier curves, ticks short strokes, and endless lines rays that fade out. Measurements export as the text they show.</p>
 
   <h2>Grid</h2>
   <p>The switch at the top (or <kbd>G</kbd>) cycles dots → half steps → free. Turning the grid on offers to snap everything that is off it in one step.</p>
+
+  <p>A right-angle mark shows its small square only while the angle is exactly 90°; at any other angle it becomes a round arc. Dragging a point, its lines pull to 15° steps (15°, 30°, 45°, 60° …) from the horizontal and from the other lines at their far end; hold <kbd>Shift</kbd> to place freely.</p>
 </article>
 
 <article data-page="pictures" data-group="Drawing" data-title="Pictures">
@@ -341,6 +401,7 @@
   <p>With several shapes selected the style bar aligns them (left, centre, right, top, middle, bottom) and spaces three or more evenly.</p>
 
   <h2>Laser pointer</h2>
+  <div class="demos one"><figure data-demo="laser"></figure></div>
   <p>Press <kbd>L</kbd> to point at things while you share your screen. <strong>Dot</strong> is a glowing pointer; <strong>Line</strong> leaves a trail that fades. Click the tool again to switch.</p>
 </article>
 
@@ -419,6 +480,8 @@
 
   <h2>Back into Figura</h2>
   <p>Paste TikZ onto the canvas, or open a <code>.tex</code> file, and Figura reads it back: nodes, lines, bends, loops, labels, arrow tips, colours (<code>red!30</code>, <code>rgb</code>, <code>\definecolor</code>) and styles from <code>\tikzset</code>. Code that Figura wrote comes back exactly as it was.</p>
+
+  <p>The TikZ export draws every line exactly as the canvas does: the short legs at ports, elbows, loops, double, wavy and zigzag lines, every arrow head and tick. The compiled picture matches the image export. A first comment line holds the drawing itself, so importing the code gives back the same shapes and lines.</p>
 </article>
 
 <article data-page="sty" data-group="LaTeX and files" data-title="figura.sty">
@@ -522,13 +585,16 @@
   <div class="tbl"><table>
     <tr><th>Key</th><th>Builds</th></tr>
     <tr><td><kbd>M</kbd></td><td>Midpoint</td></tr>
-    <tr><td><kbd>J</kbd></td><td>Perpendicular from a point to a line</td></tr>
+    <tr><td><kbd>J</kbd></td><td>Perpendicular line through a point</td></tr>
     <tr><td><kbd>B</kbd></td><td>Perpendicular bisector</td></tr>
     <tr><td><kbd>N</kbd></td><td>Parallel line through a point</td></tr>
     <tr><td><kbd>X</kbd></td><td>Intersection</td></tr>
-    <tr><td><kbd>U</kbd></td><td>Reflect a point in a line</td></tr>
+    <tr><td><kbd>U</kbd></td><td>Reflect in the marked mirror (or the selected line)</td></tr>
     <tr><td><kbd>Q</kbd></td><td>Centre of a shape</td></tr>
+    <tr><td>Dot tool on a line / circle</td><td>Point on it · at a crossing: intersection</td></tr>
+    <tr><td>Right-click</td><td>Every construction, transformation and measurement for the selection</td></tr>
   </table></div>
+  <p>Segments, rays, lines, circles, arcs, tangents, polygon interiors, transformations, measurements and marks have no key by default; set one in the app's Shortcuts tab.</p>
 
   <h2>Editing</h2>
   <div class="tbl"><table>
@@ -582,13 +648,13 @@
     <div class="feat"><a href="#/text">处处可写公式</a><p>图形、标签、连线上都能写 <code>$…$</code>、<code>\[…\]</code> 和 <code>align</code>，字体与论文一致。</p></div>
     <div class="feat"><a href="#/lines">各式连线</a><p>弧线、贝塞尔曲线、折线；双线、波浪线、锯齿线；多种箭头、自环、射线，标签可随意拖动。</p></div>
     <div class="feat"><a href="#/wiring">快速连线</a><p>一键多对一、一笔串起多个图形、平行连线，端口放在哪里就停在哪里。</p></div>
-    <div class="feat"><a href="#/geometry">几何作图</a><p>中点、垂线、交点、圆规画圆，作出的对象会跟着原来的点一起动。</p></div>
+    <div class="feat"><a href="#/geometry">几何作图</a><p>线上的点、尺规作图、变换、实时度量和标记，作出的对象会跟着原来的点一起动。</p></div>
     <div class="feat"><a href="#/tikz">TikZ 导入导出</a><p>导出的代码只需 <code>\usepackage{tikz}</code> 就能编译，也能把 TikZ 粘回来接着改。</p></div>
   </div>
 
   <h2>无需安装，无需注册</h2>
   <p>Figura 只是一个网页。画的内容会随时保存在浏览器里，加载完成后断网也能用。鼠标、触控板、手写笔、手指都可以操作。</p>
-  <p>它的姊妹项目是 <a href="https://github.com/zhoujasper/ZX-Draw" target="_blank" rel="noopener">ZX Draw</a>，两者外观和操作习惯基本一致。</p>
+  <p>它的姊妹项目是 <a href="https://zx-calculus.netlify.app/" target="_blank" rel="noopener">ZX Draw</a>（<a href="https://github.com/zhoujasper/ZX-Draw" target="_blank" rel="noopener">源码</a>），两者外观和操作习惯基本一致。</p>
 </article>
 
 <article data-page="start" lang="zh" data-group="开始" data-title="快速上手">
@@ -615,6 +681,7 @@
   </table></div>
 
   <h2>移动视图</h2>
+  <div class="demos"><figure data-demo="hand"><figcaption>平移</figcaption></figure><figure data-demo="zoom"><figcaption>缩放</figcaption></figure></div>
   <ul>
     <li><strong>平移</strong>：按住 <kbd>Space</kbd> 拖动，或用抓手工具 <kbd>H</kbd>，或双指滑动。</li>
     <li><strong>缩放</strong>：<kbd>Mod</kbd> + 滚轮、双指捏合，或 <kbd>=</kbd> 和 <kbd>−</kbd>。<kbd>F</kbd> 让所有内容铺满屏幕。</li>
@@ -622,6 +689,7 @@
   </ul>
 
   <h2>选择</h2>
+  <div class="demos one"><figure data-demo="select"></figure></div>
   <ul>
     <li>单击选中，<kbd>Shift</kbd> + 单击加选，在空白处拖出框选。</li>
     <li>再按一次 <kbd>V</kbd> 把框选换成<strong>套索</strong>；拖动时按住 <kbd>Alt</kbd> 临时切换一次。</li>
@@ -632,6 +700,8 @@
   <p>工具栏固定在底部，面板以底部弹层打开。点按选择，拖动移动，双指缩放；在任意位置长按，出现的就是电脑上右键的菜单。</p>
 
   <p class="note">在 Figura 里随时按 <kbd>?</kbd> 打开内置指南，每个手势都有循环演示动画。</p>
+
+  <p>应用支持中英文：设置 → 语言。帮助 → 完整指南会以同一种语言打开本指南。</p>
 </article>
 
 <article data-page="shapes" lang="zh" data-group="绘图" data-title="图形">
@@ -639,6 +709,7 @@
   <p class="lead">圆、方框、三角形、菱形和点，画法和常见设计软件一样。</p>
 
   <h2>画一个图形</h2>
+  <div class="demos"><figure data-demo="shapes"><figcaption>单击或拖动</figcaption></figure><figure data-demo="prop"><figcaption><kbd>Shift</kbd> 保持比例</figcaption></figure><figure data-demo="centre"><figcaption><kbd>Alt</kbd> 从中心画</figcaption></figure><figure data-demo="spmove"><figcaption><kbd>Space</kbd> 边画边移动</figcaption></figure></div>
   <div class="tbl"><table>
     <tr><th>工具</th><th>按键</th></tr>
     <tr><td>圆</td><td><kbd>O</kbd></td></tr>
@@ -656,6 +727,7 @@
   <p>新图形会沿用你上次对同类图形用的样式，所以画一排状态不用逐个改样式。</p>
 
   <h2>缩放与旋转</h2>
+  <div class="demos one"><figure data-demo="rotate"></figure></div>
   <p>选中的图形有八个控制点和一个旋转钮。缩放时 <kbd>Shift</kbd> 保持比例，<kbd>Alt</kbd> 以中心缩放。旋转会轻轻吸附到 15° 的倍数；按住 <kbd>Shift</kbd> 则按 15° 步进。<kbd>[</kbd> 和 <kbd>]</kbd> 每次转 15°。</p>
 
   <h2>填充与边框</h2>
@@ -669,14 +741,19 @@
   <p class="note">右键任意常用色、粗细或样式预设，可以修改、移动或删除它。每行末尾的 <strong>+</strong> 会把当前样式存成新预设。</p>
 
   <h2>点</h2>
+  <div class="demos one"><figure data-demo="dot"></figure></div>
   <p>点是小实心圆，用作图的顶点或几何中的点。单击放一个，会吸附到网格。尺寸预设在工具行里；选中一个点后还能精确调整大小。</p>
 
   <h2>移动与复制</h2>
+  <div class="demos"><figure data-demo="dup"><figcaption><kbd>Alt</kbd> + 拖动：复制</figcaption></figure><figure data-demo="swap"><figcaption><kbd>W</kbd> 交换两个图形</figcaption></figure></div>
   <ul>
     <li>拖动即可移动。开着网格时图形中心会吸附；自由模式下边缘和中心对齐时会出现参考线。</li>
     <li><kbd>Alt</kbd> + 拖动会留下一份副本。<kbd>Mod</kbd> <kbd>D</kbd> 原地复制。</li>
     <li>方向键微调位置。<kbd>W</kbd> 交换两个选中的图形，各自接管对方的连线。</li>
   </ul>
+
+  <h2>逻辑门</h2>
+  <p>逻辑门工具（<kbd>A</kbd>）可画与、与非、或、或非、异或、同或、非、缓冲器和反相输入缓冲器，在它的工具条里选类型。逻辑门和其他图形用法一样：连线接在输入和输出引脚上，也能导出为 TikZ。</p>
 </article>
 
 <article data-page="text" lang="zh" data-group="绘图" data-title="文字与公式">
@@ -691,6 +768,7 @@
   </ul>
 
   <h2>公式</h2>
+  <div class="demos one"><figure data-demo="text"></figure></div>
   <p>美元符号之间的内容在画布上用 KaTeX 排版，导出时使用与 LaTeX 相同的字体。</p>
   <div class="tbl"><table>
     <tr><th>写法</th><th>用途</th></tr>
@@ -712,6 +790,7 @@
   <p class="lead">连线工具 <kbd>E</kbd> 可以连接两个图形，也可以从图形连到空白处，或在两个自由点之间画线。</p>
 
   <h2>画一条线</h2>
+  <div class="demos one"><figure data-demo="wire"></figure></div>
   <ul>
     <li><strong>拖动</strong>：从一个图形拖到另一个图形，或拖到空白处得到一个自由端点。</li>
     <li><strong>点两下</strong>：先点一个图形或位置，再点第二个。同一个图形点两次就是自环。</li>
@@ -719,6 +798,7 @@
   </ul>
 
   <h2>路径</h2>
+  <div class="demos one"><figure data-demo="route"></figure></div>
   <div class="fig">
     <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 40Q38 0 68 40"/></svg>弧线</figure>
     <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 42C14 4 62 44 68 6"/></svg>贝塞尔</figure>
@@ -739,6 +819,7 @@
   <p>任何线型都能搭配任何路径和箭头。粗细、虚线样式和颜色都有可编辑的预设，用法和图形样式相同。</p>
 
   <h2>箭头</h2>
+  <div class="demos one"><figure data-demo="ray"></figure></div>
   <p>两端各自设置箭头：无、普通箭头、实心、空心三角、双箭头、实心圆点、空心圆点、竖杠、钩子或射线。工具行里有常用组合（箭头、双向、继承、映射到等）；⋯ 按钮可为每一端选择全部箭头样式。</p>
   <p><strong>射线</strong>端会越过端点继续延伸：在画布上一直画到边缘，导出时延伸一个网格步长后渐隐。</p>
 
@@ -746,6 +827,7 @@
   <p>用连线工具在同一个图形上点两次。Figura 会挑一个空闲的方向；绕着图形拖动自环即可改变位置。</p>
 
   <h2>移动连线端点</h2>
+  <div class="demos one"><figure data-demo="ports"></figure></div>
   <p>选中一个图形后，它的每条连线与它相接处都有一个圆点。沿轮廓拖动、拖到另一个图形上，或拖到空白处使该端变成自由端点。</p>
 </article>
 
@@ -754,6 +836,7 @@
   <p class="lead">端点放在哪里就停在哪里，还有一次画多条线的方法。</p>
 
   <h2>端口</h2>
+  <div class="demos one"><figure data-demo="ports"></figure></div>
   <p>方框、三角形、菱形上的每个连线端点都落在某条<strong>边</strong>上，图形移动后也不会换边。同一条边上的端点均匀分布；一条边太挤时图形会自动变大。菱形的连线接在顶点上。</p>
   <p>右键图形可以选择端口的排列方式：<strong>均匀分布</strong>、<strong>挤到两端</strong>，或<strong>全部在中间</strong>。</p>
 
@@ -761,6 +844,7 @@
   <p>圆默认不用端口：连线指向圆心，在与轮廓相交的地方接上，正是自动机里常见的样子。每个图形都可以在样式栏或右键菜单（<em>Lines meet</em>）里切换：沿线相接，或固定端口。</p>
 
   <h2>多对一</h2>
+  <div class="demos one"><figure data-demo="fan"></figure></div>
   <ol class="steps">
     <li>选中两个或更多图形。</li>
     <li>切到连线工具，点击目标图形，所有选中的图形都会连到它。</li>
@@ -772,6 +856,7 @@
   </ul>
 
   <h2>串连与平行线</h2>
+  <div class="demos"><figure data-demo="chain"><figcaption>一笔划过</figcaption></figure><figure data-demo="par"><figcaption>按住 <kbd>P</kbd></figcaption></figure><figure data-demo="rdrag"><figcaption>右键拖动</figcaption></figure></div>
   <ul>
     <li><strong>一笔划过</strong>多个图形：按经过的顺序依次连起来。</li>
     <li><strong>按住 <kbd>P</kbd></strong> 并点击目标：画平行线，每个源图形连到相同偏移位置上的图形。快速轻按 <kbd>P</kbd> 仍然是点工具。</li>
@@ -779,35 +864,76 @@
   </ul>
 
   <h2>查看连接关系</h2>
+  <div class="demos one"><figure data-demo="nb"></figure></div>
   <p>选中图形后按住 <kbd>Mod</kbd> 片刻，与每个选中图形相连的图形会闪烁，每个选中图形一种颜色。</p>
 
   <h2>删除连线中间的图形</h2>
   <p>删除一个恰好有两条连线的图形时，两条线会合并成一条，方向保持不变。新画的直线如果碰到其他图形，会弯出刚好绕开的弧度。</p>
+
+  <p>选中图形时按住 <kbd>S</kbd>（连线）或 <kbd>P</kbd>（平行连线），在图形、点和文字工具里也能用；松开后回到原来的工具。</p>
 </article>
 
 <article data-page="geometry" lang="zh" data-group="绘图" data-title="几何作图">
   <h1>几何作图</h1>
-  <p class="lead">作出的对象始终成立：移动一个点，基于它作出的一切都会跟着动。</p>
+  <p class="lead">像动态几何软件一样，作出的对象始终成立：移动一个点，基于它作出的一切都会跟着动。</p>
+
+  <h2>点</h2>
+  <div class="demos one"><figure data-demo="onpt"></figure></div>
+  <p>用点工具（<kbd>P</kbd>）：点空白处放一个自由点；点在线或圆上，得到始终留在它上面的点；点在两者相交处，得到交点。线上或圆上的点拖动时沿着它滑动。在设置里打开 <strong>Name new points</strong>，新点会自动命名为 A、B、C…；菜单里的 <strong>Name the points</strong> 给选中的点命名。</p>
+
+  <p>点在一条线的空端点上（或几条线的空端点交汇处），新点就成为这些线的端点，也就是真正的顶点。在<b>几何</b>工具栏布局（设置 → 工具栏）里，线段、射线和直线的两端总是点。</p>
 
   <h2>作图</h2>
-  <p>先选中对象，再按快捷键，或右键从菜单里选。菜单只列出当前选择能做的操作。</p>
+  <div class="demos one"><figure data-demo="construct"></figure></div>
+  <p>先选中对象（顺序有意义时按 <kbd>Shift</kbd> 依次选），再右键、点样式栏里的圆规按钮，或按快捷键。菜单只列出当前选择能做的操作。</p>
   <div class="tbl"><table>
     <tr><th>按键</th><th>作出</th><th>需要</th></tr>
+    <tr><td></td><td>重心 · 垂心 · 外心 · 内心 · 外接圆</td><td>一个三角形：三个点，或连同三边一起框选</td></tr>
+    <tr><td></td><td>各边中点</td><td>两条或更多线段</td></tr>
+    <tr><td></td><td>线段 · 射线 · 直线</td><td>两个点（3 个以上：首尾相连的线段）</td></tr>
     <tr><td><kbd>M</kbd></td><td>中点</td><td>一条线，或两个点</td></tr>
-    <tr><td><kbd>J</kbd></td><td>垂足</td><td>一个点和一条线</td></tr>
     <tr><td><kbd>B</kbd></td><td>垂直平分线</td><td>一条线，或两个点</td></tr>
+    <tr><td><kbd>J</kbd></td><td>垂线</td><td>一个点和一条线</td></tr>
     <tr><td><kbd>N</kbd></td><td>平行线</td><td>一个点和一条线</td></tr>
+    <tr><td></td><td>垂足</td><td>一个点和一条线</td></tr>
+    <tr><td></td><td>角平分线</td><td>三个点，顶点放第二个</td></tr>
     <tr><td><kbd>X</kbd></td><td>交点</td><td>两条线、一条线和一个圆，或两个圆</td></tr>
-    <tr><td><kbd>U</kbd></td><td>对称点</td><td>一个点和一条线</td></tr>
+    <tr><td></td><td>圆（圆心和圆上一点）· 过三点的圆</td><td>两个点 · 三个点</td></tr>
+    <tr><td></td><td>圆上的弧 · 过三点的弧</td><td>圆心、起点、终点 · 三个点</td></tr>
+    <tr><td></td><td>切线</td><td>一个点和一个圆</td></tr>
+    <tr><td></td><td>多边形内部</td><td>三个或更多点</td></tr>
     <tr><td><kbd>Q</kbd></td><td>中心</td><td>一个图形</td></tr>
   </table></div>
-  <p>作出的点是不能拖动的点；当原对象不再相交时它会变淡。菜单里的 <strong>Make free</strong> 可解除依赖。删除一个对象会一并删除基于它作出的对象。</p>
+  <p>这样作出的直线和射线无限延伸。作出的对象不能拖动（线上 / 圆上的点可以滑动）；原对象不再相交时它会变淡。<strong>Make free</strong> 解除依赖。删除一个对象会一并删除基于它作出的对象。所有快捷键都可以在 Shortcuts 里设置。</p>
+
+  <h2>变换</h2>
+  <div class="demos one"><figure data-demo="xform"></figure></div>
+  <p>先标记变换需要的东西：一个点 → <strong>Mark as centre</strong>（标记中心），一条线 → <strong>Mark as mirror</strong>（标记镜面），两个点 → <strong>Mark vector</strong>（标记向量）。标记显示为虚线。然后选中图形、点和线，选择 <strong>Rotate…</strong>（旋转，角度，逆时针）、<strong>Dilate…</strong>（位似，比例如 2、½ 或 −1）、<strong>Reflect</strong>（反射）或 <strong>Translate</strong>（平移）。像保留原对象的外观，名字加撇（A → A′），并跟随原对象。同时选中一个点和一条线时无需标记即可反射（<kbd>U</kbd>）。</p>
+
+  <h2>度量与标记</h2>
+  <div class="demos one"><figure data-demo="measure"></figure></div>
+  <div class="tbl"><table>
+    <tr><th>选中</th><th>度量</th></tr>
+    <tr><td>两个点</td><td>距离</td></tr>
+    <tr><td>一条线</td><td>长度 · 斜率</td></tr>
+    <tr><td>三个点，顶点放第二个</td><td>角度</td></tr>
+    <tr><td>一个圆</td><td>半径 · 周长 · 面积</td></tr>
+    <tr><td>多边形内部</td><td>面积 · 周长</td></tr>
+    <tr><td>一个点</td><td>坐标（以格为单位，y 轴向上）</td></tr>
+  </table></div>
+  <p>度量结果是一段文字，拖动时实时更新，可以放到任何位置。长度以 cm 为单位，与 LaTeX 里的大小一致。标记：三个点（或共端点的两条线）→ <strong>Angle mark</strong>（角标记）或 <strong>Right-angle mark</strong>（直角标记）；选中标记后可在一条、两条、三条弧和直角方块之间切换。选中线段可加 <strong>Equal marks</strong>（等长记号）：一、二或三道短线。</p>
 
   <h2>圆规</h2>
+  <div class="demos one"><figure data-demo="compass"></figure></div>
   <p>按 <kbd>C</kbd>。在圆心按下并拖出半径，或先点圆心再点圆上一点。基于图形画出的圆会跟随这些图形。</p>
+
+  <h2>在 LaTeX 中</h2>
+  <p>多边形内部导出为带透明度的 <code>\fill</code> 路径，弧和角标记为 Bézier 曲线，等长记号为短线段，无限直线为渐隐的射线。度量导出为它显示的文字。</p>
 
   <h2>网格</h2>
   <p>顶部的开关（或 <kbd>G</kbd>）在 点阵 → 半格 → 自由 之间切换。打开网格时，可以一步把所有不在格点上的对象吸附过去。</p>
+
+  <p>直角标记只在角度正好是 90° 时显示小方块，其他角度会变成圆弧。拖动一个点时，经过它的线会按 15° 的倍数（15°、30°、45°、60°……）吸附，以水平方向和远端的其他线为基准；按住 <kbd>Shift</kbd> 可自由放置。</p>
 </article>
 
 <article data-page="pictures" lang="zh" data-group="绘图" data-title="图片">
@@ -845,6 +971,7 @@
   <p>选中多个图形时，样式栏可以对齐它们（左、居中、右、上、中、下），三个及以上还能等距分布。</p>
 
   <h2>激光笔</h2>
+  <div class="demos one"><figure data-demo="laser"></figure></div>
   <p>共享屏幕时按 <kbd>L</kbd> 指点内容。<strong>Dot</strong> 是发光的指示点；<strong>Line</strong> 会留下逐渐消失的轨迹。再点一次工具可以切换。</p>
 </article>
 
@@ -922,6 +1049,8 @@
 
   <h2>导回 Figura</h2>
   <p>把 TikZ 粘到画布上，或打开 <code>.tex</code> 文件，Figura 会读回来：节点、连线、弯曲、自环、标签、箭头、颜色（<code>red!30</code>、<code>rgb</code>、<code>\definecolor</code>）以及 <code>\tikzset</code> 里的样式。Figura 自己导出的代码能原样还原。</p>
+
+  <p>TikZ 导出会把每条线按画布上的样子精确画出：端口处的短引线、折线、自环、双线、波浪线、折线线形、所有箭头和等长记号。编译结果与图片导出一致。开头一行注释保存了整张图，导入这段代码会得到同样的图形和连线。</p>
 </article>
 
 <article data-page="sty" lang="zh" data-group="LaTeX 与文件" data-title="figura.sty">
@@ -1024,13 +1153,16 @@
   <div class="tbl"><table>
     <tr><th>按键</th><th>作出</th></tr>
     <tr><td><kbd>M</kbd></td><td>中点</td></tr>
-    <tr><td><kbd>J</kbd></td><td>过点作线的垂线</td></tr>
+    <tr><td><kbd>J</kbd></td><td>过点作垂线</td></tr>
     <tr><td><kbd>B</kbd></td><td>垂直平分线</td></tr>
     <tr><td><kbd>N</kbd></td><td>过点作平行线</td></tr>
     <tr><td><kbd>X</kbd></td><td>交点</td></tr>
-    <tr><td><kbd>U</kbd></td><td>关于直线的对称点</td></tr>
+    <tr><td><kbd>U</kbd></td><td>关于标记镜面（或选中直线）反射</td></tr>
     <tr><td><kbd>Q</kbd></td><td>图形的中心</td></tr>
+    <tr><td>点工具点在线 / 圆上</td><td>线上 / 圆上的点 · 点在相交处：交点</td></tr>
+    <tr><td>右键</td><td>当前选择可用的全部作图、变换和度量</td></tr>
   </table></div>
+  <p>线段、射线、直线、圆、弧、切线、多边形内部、变换、度量和标记默认没有快捷键，可在应用的 Shortcuts 里设置。</p>
 
   <h2>编辑</h2>
   <div class="tbl"><table>
@@ -1077,6 +1209,7 @@
   </div>
 </div>
 
-<script src="guide.js?v=2"></script>
+<script src="demos.js?v=2"></script>
+<script src="guide.js?v=4"></script>
 </body>
 </html>

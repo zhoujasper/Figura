@@ -1078,4 +1078,34 @@ body.dk-dragging, body.dk-dragging * { cursor: grabbing !important; user-select:
 /* chips in a row share the tallest height: keep each one's controls in the middle */
 .dk-sp { display: flex; align-items: center; justify-content: center; }
 /* free-standing text: canvas-coloured backing so the grid dots stop at the text */
-.node.bk .lab { background: var(--bg); box-shadow: 0 0 0 4px var(--bg); border-radius: 4px; }
+.node.bk .lab { background: var(--bg); border-radius: 3px; }
+
+/* transforms: marked centre / mirror / vector, and the number card */
+.o-tfm { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 3 3; opacity: .85; animation: fanDash .6s linear infinite; }
+.o-tfm.vec { stroke-linejoin: round; stroke-linecap: round; }
+#ncard { position: fixed; z-index: 22; display: flex; align-items: center; gap: 2px; padding: 4px 5px; background: #fff; border-radius: 11px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.12); }
+#ncard.in { animation: qin .22s var(--spring); transform-origin: 50% 0; }
+#ncard .nc-ic { display: grid; place-items: center; width: 22px; color: var(--muted); }
+#ncard .nc-in { width: 46px; height: 24px; border: 0; border-radius: 6px; background: rgba(0,0,0,.04); outline: none; text-align: center; font: 12px var(--mono); color: var(--ink); }
+#ncard .nc-in:focus { box-shadow: inset 0 0 0 1px var(--accent); }
+#ncard .nc-in.bad { box-shadow: inset 0 0 0 1px #d0453a; }
+#ncard .nc-u { font: 12px var(--mono); color: var(--muted); padding: 0 4px 0 2px; }
+#ncard .nc-sep { width: 1px; height: 16px; background: rgba(0,0,0,.08); margin: 0 3px; }
+#ncard button { height: 24px; min-width: 26px; padding: 0 5px; border: 0; border-radius: 6px; background: none; font: 12px var(--mono); color: var(--ink); cursor: pointer; display: grid; place-items: center; }
+#ncard button:hover { background: rgba(0,0,0,.035); }
+#ncard .nc-ok { color: var(--accent); }
+@media (max-width: 640px) { #ncard { flex-wrap: wrap; max-width: calc(100vw - 32px); } }
+
+/* Help: link to the full guide */
+.hguide { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted, #6e6e73); text-decoration: none; padding: 3px 8px; border-radius: 6px; margin-right: 4px; transition: background .15s, color .15s; }
+.hguide:hover { color: var(--accent); background: rgba(0,0,0,.035); }
+/* File export: pick pages */
+.ef-row.pick { width: 100%; border: 0; text-align: left; font: inherit; color: var(--ink); cursor: pointer; justify-content: flex-start; background: transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); transition: background .15s, box-shadow .15s, opacity .15s; }
+.ef-row.pick:hover { background: rgba(0,0,0,.035); }
+.ef-row.pick.on { background: var(--soft); box-shadow: none; }
+.ef-row.pick:not(.on) b { opacity: .55; }
+.ef-ck { width: 16px; height: 16px; flex: none; border-radius: 5px; display: grid; place-items: center; box-shadow: inset 0 0 0 1.3px rgba(0,0,0,.22); color: transparent; transition: background .15s, color .15s, box-shadow .15s; }
+.ef-ck.on { background: var(--ink); color: var(--bg); box-shadow: none; }
+.btn .ef-n { margin-left: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: rgba(255,255,255,.2); font-size: 11px; display: inline-grid; place-items: center; }
+.btn[disabled] { opacity: .4; pointer-events: none; }

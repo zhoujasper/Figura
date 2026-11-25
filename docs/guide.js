@@ -20,6 +20,8 @@
     zh: { search: '搜索', find: '搜索指南', none: '没有找到', prev: '上一页', next: '下一页', toc: '本页内容', open: '打开 Figura',
       copy: '复制', copied: '已复制', title: 'Figura 使用指南', theme: '主题', sw: 'EN', swT: 'Switch to English' },
   };
+  const qLang = new URLSearchParams(location.search).get('lang');
+  if (qLang === 'zh' || qLang === 'en') ls.set('fg-doc-lang', qLang);
   let lang = ls.get('fg-doc-lang') || (/^zh/i.test(navigator.language || '') ? 'zh' : 'en');
   const t = k => UI[lang][k];
   const all = $$('article[data-page]');
@@ -52,8 +54,23 @@
     $$('kbd[data-k]').forEach(k => k.textContent = KEYN[plat][k.dataset.k]);
     $$('.plat button').forEach(b => b.classList.toggle('on', b.dataset.p === plat));
     placePill();
+    drawDemos();
   };
   $$('.plat button').forEach(b => b.onclick = () => { plat = b.dataset.p; ls.set('fg-doc-plat', plat); applyPlat(); });
+
+  /* ---------- looping demos (demos.js, generated from the app's DEMOS) ---------- */
+  const DM_ZH = { 'arc': '弧线', 'Bézier': '贝塞尔', 'S-curve': 'S 形', 'elbow': '折线', '15° per press': '每按一次 15°' };
+  function drawDemos() {
+    const D = window.FG_DEMOS || {}, W = window.FG_DEMOS_WIN || {};
+    $$('[data-demo]').forEach((f, i) => {
+      let svg = (plat === 'win' && W[f.dataset.demo]) || D[f.dataset.demo]; if (!svg) return;
+      /* gradient ids must be unique on the page (the other language's copy is hidden) */
+      svg = svg.replace(/id="(\w+)"/g, `id="$1-${i}"`).replace(/url\(#(\w+)\)/g, `url(#$1-${i})`);
+      if (f.closest('[lang="zh"]')) svg = svg.replace(/(class="dlabel"[^>]*>)([^<]+)/g, (m, a, b) => a + (DM_ZH[b] || b));
+      let dm = f.querySelector('.dm'); if (!dm) { dm = document.createElement('div'); dm.className = 'dm'; f.prepend(dm); }
+      dm.innerHTML = svg;
+    });
+  }
 
   /* ---------- once per article: heading ids, anchors, crumbs, code ---------- */
   all.forEach(p => {
@@ -104,7 +121,7 @@
       const ti = p.dataset.title, pg = p.dataset.page;
       let sec = { title: ti, page: ti, href: '#/' + pg, text: '' }; idx.push(sec);
       [...p.children].forEach(el => {
-        if (el.matches('.pn, .crumb')) return;
+        if (el.matches('.pn, .crumb, .demos')) return;
         if (el.matches('h2, h3')) { sec = { title: el.firstChild.textContent, page: ti, href: '#/' + pg + '/' + el.id.split('--')[1], text: '' }; idx.push(sec); }
         else sec.text += ' ' + el.textContent.replace(/\s+/g, ' ');
       });

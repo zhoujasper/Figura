@@ -114,9 +114,12 @@ const KDEF = {
   text: { w: 12, h: 12, fill: 'none', stroke: 'none', sw: 1.5, dbl: false, sd: 'solid', rad: 0 },
   dot: { w: 8, h: 8, fill: '#1d1d1f', stroke: 'none', sw: 1.5, dbl: false, sd: 'solid', rad: 0 },
   image: { w: 160, h: 120, fill: 'none', stroke: 'none', sw: 1.5, dbl: false, sd: 'solid', rad: 0 },
+  poly: { w: 10, h: 10, fill: '#dbeafe', stroke: 'none', sw: 1.5, dbl: false, sd: 'solid', rad: 0 },
+  mark: { w: 36, h: 36, fill: 'none', stroke: '#1d1d1f', sw: 1.2, dbl: false, sd: 'solid', rad: 0 },
+  gate: { w: 64, h: 40, fill: 'none', stroke: '#1d1d1f', sw: 1.5, dbl: false, sd: 'solid', rad: 0, g: 'and' },
 };
 const TS = { size: 15, color: '#1d1d1f', bold: false, italic: false, under: false, vert: false };
-const STYLE_KEYS = ['fill', 'stroke', 'sw', 'dbl', 'sd', 'rad', 'dir', 'att'];
+const STYLE_KEYS = ['fill', 'stroke', 'sw', 'dbl', 'sd', 'rad', 'dir', 'att', 'g'];
 const LS = { doc: 'figura-doc-v1', ws: 'figura-ws-v1', prefs: 'figura-prefs-v1', seen: 'figura-seen-v1', mm: 'figura-mm-v1', dock: 'figura-dock-v1', cp: 'figura-cp-v1', recent: 'figura-recent-v1', order: 'figura-order-v1', docks: 'figura-docks-v1' };
 const lsGet = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
@@ -135,6 +138,7 @@ let idx = new Map();             // node id → node
 let sel = new Set();             // selected node and edge ids
 let cam = { x: 0, y: 0, z: 1 };
 let tool = 'select';
+const DRAWING = new Set(['circle', 'rect', 'tri', 'diamond', 'gate', 'dot', 'text']);
 let holdS = false, parMode = null, nbOn = 0, nbT = 0;
 let drag = null, hov = null, wirePend = null, editing = null, crop = null, guides = [];
 let space = false, undoS = [], redoS = [], clip = null, clipText = '', pasteN = 0, lastPtr = null, pasteWait = 0;
@@ -161,7 +165,8 @@ const snapP = p => ({ x: snapV(p.x), y: snapV(p.y) });
 function poly(n, w, h) {
   const a = w / 2, b = h / 2;
   switch (n.k) {
-    case 'circle': case 'dot': return null;
+    case 'circle': case 'dot': case 'mark': return null;
+    case 'poly': return n.pp || [[-a, -b], [a, -b], [0, b]];
     case 'diamond': return [[0, -b], [a, 0], [0, b], [-a, 0]];
     case 'tri': return { up: [[0, -b], [a, b], [-a, b]], down: [[0, b], [-a, -b], [a, -b]], right: [[a, 0], [-a, b], [-a, -b]], left: [[-a, 0], [a, -b], [a, b]] }[n.dir || 'up'];
     default: return [[-a, -b], [a, -b], [a, b], [-a, b]];
@@ -186,7 +191,7 @@ function boundary(n, p) {
   let l = toLocal(n, p), L = Math.hypot(l.x, l.y);
   if (L < 1e-6) { l = { x: 0, y: -1 }; L = 1; }
   const ux = l.x / L, uy = l.y / L;
-  const t = n.k === 'circle' || n.k === 'dot' ? 1 / Math.sqrt((ux / (w / 2)) ** 2 + (uy / (h / 2)) ** 2) : (rayPoly(poly(n, w, h), ux, uy) || Math.max(w, h) / 2);
+  const t = n.k === 'circle' || n.k === 'dot' || n.k === 'mark' ? 1 / Math.sqrt((ux / (w / 2)) ** 2 + (uy / (h / 2)) ** 2) : (rayPoly(poly(n, w, h), ux, uy) || Math.max(w, h) / 2);
   return fromLocal(n, { x: ux * (t + pad), y: uy * (t + pad) });
 }
 function pip(P, p) {
@@ -207,17 +212,21 @@ function inside(n, p, m = 0) {
   let a = w / 2 + m, b = h / 2 + m;
   if (n.k === 'dot') { a = b = Math.max(a, m ? 7 / cam.z : 0); return l.x * l.x + l.y * l.y <= a * a; }
   if (n.k === 'circle') return (l.x / a) ** 2 + (l.y / b) ** 2 <= 1;
+  if (n.k === 'mark') { if (!n.am) return false; const d = Math.hypot(l.x, l.y), r = n.mr || 16, k = Math.atan2(l.y, l.x) - n.am.a0, sw = n.am.sw, f = (((sw > 0 ? k : -k) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); return d >= r * .45 && d <= a + 2 && f <= Math.abs(sw); }
+  if (n.k === 'poly') { const P = n.pp || []; return pip(P, l) || P.some((A, i) => segDist(l, A, P[(i + 1) % P.length]) <= m); }
   if (Math.abs(l.x) > a || Math.abs(l.y) > b) return false;
   if (n.k === 'diamond') return Math.abs(l.x) / a + Math.abs(l.y) / b <= 1;
   if (n.k === 'tri') { const P = poly(n, w, h); return pip(P, l) || P.some((A, i) => segDist(l, A, P[(i + 1) % P.length]) <= m); }
   return true;
 }
+/* a built circle without fill is only hit on its ring, so what lies inside it stays clickable */
+const ringOnly = n => n.k === 'circle' && !!n.dep && n.fill === 'none';
 function hitNode(p, skip) {
   const m = 4 / cam.z;
   /* points win over anything they sit on (a dot on a circle's ring, a midpoint on a line) */
-  for (let i = doc.nodes.length - 1; i >= 0; i--) { const n = doc.nodes[i]; if (n !== skip && n.k === 'dot' && inside(n, p, m)) return n; }
+  for (let i = doc.nodes.length - 1; i >= 0; i--) { const n = doc.nodes[i]; if (n !== skip && !n.hid && n.k === 'dot' && inside(n, p, m)) return n; }
   /* a compass circle is only hit on its ring, so what lies inside it stays clickable */
-  for (let i = doc.nodes.length - 1; i >= 0; i--) { const n = doc.nodes[i]; if (n !== skip && (n.dep?.op === 'circ' ? Math.abs(Math.hypot(p.x - n.x, p.y - n.y) - n.w / 2) <= m + 2 / cam.z : inside(n, p, m))) return n; }
+  for (let i = doc.nodes.length - 1; i >= 0; i--) { const n = doc.nodes[i]; if (n !== skip && !n.hid && (ringOnly(n) ? Math.abs(Math.hypot(p.x - n.x, p.y - n.y) - n.w / 2) <= m + 2 / cam.z : inside(n, p, m))) return n; }
   return null;
 }
 function corners(n, pad = 0) {
@@ -256,7 +265,58 @@ function roundPath(P, r) {
   for (let i = 1; i <= n; i++) { const c = C[i % n]; d += 'L' + fmt(c[0]) + 'Q' + fmt(c[1]) + ' ' + fmt(c[2]); }
   return d + 'Z';
 }
+/* ================= logic gates: one node kind, n.g picks the symbol ================= */
+const GATES = ['and', 'nand', 'or', 'nor', 'xor', 'xnor', 'not', 'buf', 'inot'];
+const GATE_NAMES = { and: 'AND', nand: 'NAND', or: 'OR', nor: 'NOR', xor: 'XOR', xnor: 'XNOR', not: 'NOT', buf: 'Buffer', inot: 'Inverted input' };
+const gIn = g => ['not', 'buf', 'inot'].includes(g) ? 1 : 2;
+const gOutBub = g => ['nand', 'nor', 'xnor', 'not'].includes(g);
+/* the symbol in a w × h box (origin top-left) as path commands: body (closed, filled) and wires (leads, bubbles, XOR's extra arc); ins = input heights */
+function gateCmds(g, w, h) {
+  g = GATES.includes(g) ? g : 'and';
+  const lead = Math.min(w * .16, 14), r = Math.max(2.2, Math.min(h * .08, 4.5)), k = .5523, tri = gIn(g) === 1, ins = tri ? [h / 2] : [h * .25, h * .75];
+  const orish = /or$/.test(g), xo = g === 'xor' || g === 'xnor', gap = Math.max(4, w * .07);
+  const x0 = lead + (g === 'inot' ? 2 * r : 0) + (xo ? gap : 0), x1 = w - lead - (gOutBub(g) ? 2 * r : 0), bw = x1 - x0, c = bw * .28;
+  const body = [], wires = [];
+  const circ = (cx, cy) => [['M', cx + r, cy], ['C', cx + r, cy + k * r, cx + k * r, cy + r, cx, cy + r], ['C', cx - k * r, cy + r, cx - r, cy + k * r, cx - r, cy], ['C', cx - r, cy - k * r, cx - k * r, cy - r, cx, cy - r], ['C', cx + k * r, cy - r, cx + r, cy - k * r, cx + r, cy]];
+  if (tri) body.push(['M', x0, h * .08], ['L', x1, h / 2], ['L', x0, h * .92], ['Z']);
+  else if (!orish) { const xm = x0 + bw * .42, rx = x1 - xm, ry = h / 2; body.push(['M', x0, 0], ['L', xm, 0], ['C', xm + k * rx, 0, x1, ry - k * ry, x1, ry], ['C', x1, ry + k * ry, xm + k * rx, h, xm, h], ['L', x0, h], ['Z']); }
+  else body.push(['M', x0, 0], ['C', x0 + bw * .5, 0, x0 + bw * .82, h * .14, x1, h / 2], ['C', x0 + bw * .82, h * .86, x0 + bw * .5, h, x0, h], ['C', x0 + c * 2 / 3, h * 2 / 3, x0 + c * 2 / 3, h / 3, x0, 0], ['Z']);
+  const back = xo ? x0 - gap : x0, backX = y => back + 2 * c * (y / h) * (1 - y / h);
+  for (const y of ins) {
+    let xe = orish ? backX(y) : x0;
+    if (g === 'inot') { xe = x0 - 2 * r; wires.push(...circ(x0 - r, y)); }
+    wires.push(['M', 0, y], ['L', xe, y]);
+  }
+  if (xo) wires.push(['M', back, 0], ['C', back + c * 2 / 3, h / 3, back + c * 2 / 3, h * 2 / 3, back, h]);
+  if (gOutBub(g)) wires.push(...circ(x1 + r, h / 2));
+  wires.push(['M', x1 + (gOutBub(g) ? 2 * r : 0), h / 2], ['L', w, h / 2]);
+  return { body, wires, ins };
+}
+const cmdD = (C, f = (x, y) => `${f2(x)},${f2(y)}`) => C.map(c => c[0] === 'Z' ? 'Z' : c[0] + (c[0] === 'C' ? `${f(c[1], c[2])} ${f(c[3], c[4])} ${f(c[5], c[6])}` : f(c[1], c[2]))).join('');
+const gateIc = (g, s = 16) => { const G = gateCmds(g, 22, 13), F = (x, y) => `${f2(x + 1)},${f2(y + 5.5)}`; return sv(`<path d="${cmdD(G.body, F)}"/><path d="${cmdD(G.wires, F)}"/>`, s); };
+IC.gate = gateIc('and', 18);
+const GATE_SEG = GATES.map(g => [g, gateIc(g), GATE_NAMES[g]]);
+/* lines on a gate land on its terminals: inputs on the left side, the output in the middle of the right side */
+function gateOffs(n, i, Ls, h) {
+  if (i === 1) return { o: Ls.map(() => 0) };
+  if (i !== 3) return null;
+  const T = gateCmds(n.g, 10, h).ins.map(y => h / 2 - y).sort((a, b) => a - b);   // the left side runs upwards
+  if (Ls.length > T.length) return null;
+  if (Ls.length === T.length) return { o: T };
+  const used = new Set();
+  return { o: Ls.map(x => { let bi = 0, bd = Infinity; T.forEach((t, j) => { if (!used.has(j) && Math.abs(t - x.key) < bd) { bd = Math.abs(t - x.key); bi = j; } }); used.add(bi); return T[bi]; }) };
+}
+function gateTex(n, P, plain, col) {
+  const { w, h } = size(n), G = gateCmds(n.g, w, h), W = (x, y) => { const q = fromLocal(n, { x: x - w / 2, y: y - h / 2 }); return P(q.x, q.y); };
+  const tk = C => C.map(c => c[0] === 'M' ? W(c[1], c[2]) : c[0] === 'L' ? '-- ' + W(c[1], c[2]) : c[0] === 'C' ? `.. controls ${W(c[1], c[2])} and ${W(c[3], c[4])} .. ${W(c[5], c[6])}` : '-- cycle').join(' ');
+  const fl = n.fill && n.fill !== 'none' ? (plain ? `fill=${rgbOf(n.fill)}` : col('fill', n.fill, '')) : '';
+  if (n.stroke === 'none') return fl ? `\\fill[${fl}] ${tk(G.body)};` : '';
+  const o = [plain ? `draw=${rgbOf(n.stroke)}` : col('draw', n.stroke, ''), `line width=${pd(n.sw)}`, pDash(n.sd, n.sw)].filter(Boolean).join(', ');
+  return `\\draw[${o}${fl ? ', ' + fl : ''}] ${tk(G.body)};\n  \\draw[${o}] ${tk(G.wires)};`;
+}
 function shapeD(n, w, h, inset = 0) {
+  if (n.k === 'mark') return markD(n, w, h);
+  if (n.k === 'gate') return inset ? 'M0,0' : cmdD(gateCmds(n.g, w, h).body);
   const cx = w / 2, cy = h / 2;
   if (n.k === 'circle' || n.k === 'dot') {
     const a = Math.max(.5, w / 2 - inset), b = Math.max(.5, h / 2 - inset);
@@ -311,13 +371,14 @@ function styleLab(lab, ts) {
 }
 /* size a shape needs around a text box tw × th */
 function needSize(n, m) {
-  if (n.k === 'image' || n.k === 'dot' || !m.w) return { w: 0, h: 0 };
+  if (n.k === 'image' || n.k === 'dot' || n.k === 'poly' || n.k === 'mark' || !m.w) return { w: 0, h: 0 };
   const ex = n.dbl ? 9 : 0, tw = m.w, th = m.h;
   switch (n.k) {
     case 'text': return { w: tw + 6, h: th + 4 };
     case 'rect': return { w: tw + 24 + ex, h: th + 14 + ex };
     case 'circle': { let w = Math.SQRT2 * (tw + 8) + ex, h = Math.SQRT2 * (th + 4) + ex; if (w / h < 1.6) w = h = Math.max(w, h); return { w, h }; }
     case 'diamond': return { w: 2 * tw + 22 + ex, h: 2 * th + 16 + ex };
+    case 'gate': return { w: tw * 1.5 + 34 + ex, h: th + 16 + ex };
     case 'tri': { const v = !n.dir || n.dir === 'up' || n.dir === 'down'; return v ? { w: 2.15 * (tw + 8) + ex, h: 2.6 * th + 12 + ex } : { w: 2.6 * tw + 12 + ex, h: 2.15 * (th + 8) + ex }; }
   }
   return { w: tw, h: th };
@@ -343,15 +404,16 @@ function imageMarkup(n, w, h, uidS, url) {
 function shapeMarkup(n, w, h, uidS, urlFn) {
   const d = shapeD(n, w, h);
   let s = '';
-  const showFill = n.k !== 'text' && n.k !== 'image' && n.fill !== 'none';
-  if (showFill) s += `<path d="${d}" fill="${n.fill}"/>`;
+  const showFill = n.k !== 'text' && n.k !== 'image' && n.k !== 'mark' && n.fill !== 'none';
+  if (showFill) s += `<path d="${d}" fill="${n.fill}"${n.k === 'poly' ? ` fill-opacity="${n.fo ?? .55}"` : ''}/>`;
   if (n.img && assets[n.img] && n.k !== 'text') {
     s += `<defs><clipPath id="c${uidS}"><path d="${d}"/></clipPath></defs>` + imageMarkup(n, w, h, uidS, urlFn(n.img));
   }
   if (n.k !== 'text' && n.stroke !== 'none' && n.sw > 0) {
     const da = dashArr(n.sd, n.sw);
     s += `<path d="${d}" fill="none" stroke="${n.stroke}" stroke-width="${n.sw}" ${da}/>`;
-    if (n.dbl) s += `<path d="${shapeD(n, w, h, Math.max(3.2, n.sw * 1.6 + 2.2))}" fill="none" stroke="${n.stroke}" stroke-width="${n.sw}" ${da}/>`;
+    if (n.dbl && n.k !== 'gate') s += `<path d="${shapeD(n, w, h, Math.max(3.2, n.sw * 1.6 + 2.2))}" fill="none" stroke="${n.stroke}" stroke-width="${n.sw}" ${da}/>`;
+    if (n.k === 'gate') s += `<path d="${cmdD(gateCmds(n.g, w, h).wires)}" fill="none" stroke="${n.stroke}" stroke-width="${n.sw}" stroke-linecap="round"/>`;
   }
   return s;
 }
@@ -374,7 +436,7 @@ function endPt(e, which) {
 const STUB = 9, PSTEP = 14, PMAG = 26, VMAG = 11;
 /* 'along the line': lines aim at the centre and meet the outline where they cross it (no ports). Circles do that unless n.att = 'pin';
    other shapes have ports unless n.att = 'free' */
-const isFree = n => n.k === 'circle' ? n.att !== 'pin' : n.att === 'free';
+const isFree = n => n.k === 'circle' ? n.att !== 'pin' : n.k === 'poly' || n.k === 'mark' || n.att === 'free';
 const hasPorts = n => !!n && n.k !== 'dot' && !isFree(n);
 const attOf = n => isFree(n) ? 'free' : 'pin';
 const ATTS = [['free', sv('<circle cx="10" cy="14" r="6.5"/><path d="M14.6 9.4 21 3"/>', 16), 'Along the line: meets the circle where it points'],
@@ -460,6 +522,7 @@ function portOffs(k, len, lay) {
 }
 /* the size a shape needs so its ports fit */
 function portGrow(n, w, h) {
+  if (n.k === 'gate') return { w, h };
   if (!hasPorts(n) || !EB.has(n.id) || n.lay === 'mid') return { w, h };
   const { S, lists } = sortSides(n, w, h);
   if (n.k === 'circle' || rectLike(n)) {
@@ -474,7 +537,7 @@ function layoutOf(n) {
   let L = PL.get(n.id); if (L) return L;
   const { w, h } = size(n), { S, V, lists, vx } = sortSides(n, w, h), map = new Map(), pad = bpad(n), lay = n.lay || '';
   lists.forEach((Ls, i) => {
-    const { o } = portOffs(Ls.length, S[i].len, lay);
+    const { o } = (n.k === 'gate' && gateOffs(n, i, Ls, h)) || portOffs(Ls.length, S[i].len, lay);
     Ls.forEach((x, j) => { const q = sidePt(S[i], o[j], w, h); map.set(x.e.id + ':' + x.w, { x: q.x + q.nx * pad, y: q.y + q.ny * pad, nx: q.nx, ny: q.ny, leg: lay === 'mid' ? 0 : STUB, s: i, t: clamp(o[j], -S[i].len / 2, S[i].len / 2) }); });
   });
   if (vx.length) {
@@ -552,9 +615,9 @@ function pinAt(n, p) {
 function magnetAt(p, skip) {
   const R = PMAG / cam.z; let best = null, bd = Infinity;
   for (let i = doc.nodes.length - 1; i >= 0; i--) {
-    const n = doc.nodes[i]; if (n.id === skip) continue;
+    const n = doc.nodes[i]; if (n.id === skip || n.hid || n.k === 'poly' || n.k === 'mark') continue;
     let dist;
-    if (n.dep?.op === 'circ') dist = Math.abs(Math.hypot(p.x - n.x, p.y - n.y) - size(n).w / 2);
+    if (ringOnly(n)) dist = Math.abs(Math.hypot(p.x - n.x, p.y - n.y) - size(n).w / 2);
     else if (n.k !== 'dot' && inside(n, p)) dist = 0;
     else { const b = boundary(n, p); dist = Math.max(0, Math.hypot(p.x - n.x, p.y - n.y) - Math.hypot(b.x - n.x, b.y - n.y)); }
     if (dist > R) continue;
@@ -587,20 +650,55 @@ function landPort(from, e, w, n) { const t = portAnim.get(from + ':' + w + '@' +
    n.dep = { op, ... }: the node's place (and a circle's size) is worked out from the objects it names on every render;
    it cannot be dragged, it follows them. ops: mid (e | a,b), pb (e | a,b, s=±1: ends of the perpendicular bisector),
    foot (p, e), refl (p, e), par (p, e), x (e, e2), xlc (e, c, s), xcc (c1, c2, s), ctr (n), circ (c, r: {n} or {x,y}). */
-const DEP_IDS = ['e', 'e2', 'p', 'a', 'b', 'n', 'c', 'c1', 'c2'];
-const depRefs = d => { const r = []; for (const k of DEP_IDS) if (typeof d[k] === 'string') r.push(d[k]); for (const k of ['c', 'r']) if (d[k] && typeof d[k] === 'object' && d[k].n) r.push(d[k].n); return r; };
-function depPos(d) {
-  const P = id => { const n = idx.get(id); return n ? { x: n.x, y: n.y } : null; };
-  const Ln = id => { const e = edgeById(id); if (!e || (e.a && e.a === e.b)) return null; const A = endPt(e, 'a'), B = endPt(e, 'b'); if ((e.a && !A.n) || (e.b && !B.n)) return null; return Math.hypot(B.x - A.x, B.y - A.y) > 1e-9 ? [A, B] : null; };
-  const Ci = id => { const n = idx.get(id); return n ? { x: n.x, y: n.y, r: (n.w + n.h) / 4 } : null; };
+/* ids a dependency names: string values under these keys, ids in a pts list, and the same inside c / r / t objects */
+const DEP_REF = new Set(['e', 'e2', 'p', 'a', 'b', 'n', 'c', 'c1', 'c2', 'src']);
+function depWalk(d, fn) {
+  for (const k of Object.keys(d)) {
+    const v = d[k];
+    if (typeof v === 'string' && DEP_REF.has(k)) fn(v, x => { d[k] = x; });
+    else if (Array.isArray(v) && k === 'pts') v.forEach((x, i) => { if (typeof x === 'string') fn(x, y => { v[i] = y; }); });
+    else if (v && typeof v === 'object' && !Array.isArray(v) && (k === 'c' || k === 'r' || k === 't')) depWalk(v, fn);
+  }
+}
+const depRefs = d => { const r = []; depWalk(d, v => r.push(v)); return r; };
+/* built points you can still drag: a point on a line / circle slides along it; a measurement moves freely */
+const MOVABLE = new Set(['on', 'meas']);
+const canMove = n => !n.dep || MOVABLE.has(n.dep.op);
+/* a straight line's two defining points (null for loops, curves and arcs) */
+function gLine(e) {
+  if (!e || (e.a && e.a === e.b) || e.route === 'carc' || (e.route && e.route !== 'arc') || e.bend) return null;
+  const A = endPt(e, 'a'), B = endPt(e, 'b');
+  if ((e.a && (!A.n || A.n.dead)) || (e.b && (!B.n || B.n.dead))) return null;
+  return Math.hypot(B.x - A.x, B.y - A.y) > 1e-9 ? [A, B] : null;
+}
+const gCirc = n => n && !n.dead && n.k === 'circle' ? { x: n.x, y: n.y, r: (n.w + n.h) / 4 } : null;
+const footOf = (p, A, B) => { const dx = B.x - A.x, dy = B.y - A.y, t = ((p.x - A.x) * dx + (p.y - A.y) * dy) / (dx * dx + dy * dy); return { x: A.x + t * dx, y: A.y + t * dy, t }; };
+const CM_PX = .66667 / 28.4528;   // cm per canvas px, as printed by the LaTeX export
+/* a point's name: its outer label (A, $B_1$ …) without the maths markers */
+const ptName = id => { const n = idx.get(id), t = n && n.ol && OL_SIDES.map(s => n.ol[s]).find(Boolean); return t ? t.replace(/^\$|\$$/g, '').replace(/^\\\(|\\\)$/g, '').trim() : ''; };
+const fmt2 = v => (Math.round(v * 100) / 100).toFixed(2);
+/* a transform applied to a point: translate by a vector (a → b), rotate about c, dilate from c, reflect in a line */
+function tfPt(t, q) {
+  const P = id => { const n = idx.get(id); return n && !n.dead ? n : null; };
+  if (t.k === 'tr') { const A = P(t.a), B = P(t.b); return A && B && { x: q.x + B.x - A.x, y: q.y + B.y - A.y }; }
+  if (t.k === 'rot') { const C = P(t.c); if (!C) return null; const v = rotv(q.x - C.x, q.y - C.y, -t.deg); return { x: C.x + v.x, y: C.y + v.y }; }
+  if (t.k === 'dil') { const C = P(t.c); return C && { x: C.x + (q.x - C.x) * t.f, y: C.y + (q.y - C.y) * t.f }; }
+  if (t.k === 'refl') { const l = gLine(edgeById(t.e)); if (!l) return null; const f = footOf(q, ...l); return { x: 2 * f.x - q.x, y: 2 * f.y - q.y }; }
+  return null;
+}
+function depPos(d, self) {
+  const P = id => { const n = idx.get(id); return n && !n.dead ? { x: n.x, y: n.y } : null; };
+  const Ln = id => gLine(edgeById(id));
+  const Ci = id => gCirc(idx.get(id));
   const two = () => d.e ? Ln(d.e) : (P(d.a) && P(d.b) ? [P(d.a), P(d.b)] : null);
-  const foot = (p, A, B) => { const dx = B.x - A.x, dy = B.y - A.y, t = ((p.x - A.x) * dx + (p.y - A.y) * dy) / (dx * dx + dy * dy); return { x: A.x + t * dx, y: A.y + t * dy }; };
   switch (d.op) {
     case 'mid': { const l = two(); return l && { x: (l[0].x + l[1].x) / 2, y: (l[0].y + l[1].y) / 2 }; }
     case 'pb': { const l = two(); if (!l) return null; const [A, B] = l; return { x: (A.x + B.x) / 2 - (B.y - A.y) / 2 * d.s, y: (A.y + B.y) / 2 + (B.x - A.x) / 2 * d.s }; }
-    case 'foot': { const l = Ln(d.e), q = P(d.p); return l && q && foot(q, ...l); }
-    case 'refl': { const l = Ln(d.e), q = P(d.p); if (!l || !q) return null; const f = foot(q, ...l); return { x: 2 * f.x - q.x, y: 2 * f.y - q.y }; }
+    case 'foot': { const l = Ln(d.e), q = P(d.p); return l && q && footOf(q, ...l); }
+    case 'refl': { const l = Ln(d.e), q = P(d.p); if (!l || !q) return null; const f = footOf(q, ...l); return { x: 2 * f.x - q.x, y: 2 * f.y - q.y }; }
     case 'par': { const l = Ln(d.e), q = P(d.p); return l && q && { x: q.x + l[1].x - l[0].x, y: q.y + l[1].y - l[0].y }; }
+    /* a hidden helper two grid steps from p, square to the line (perp) or along it (par): the second point of an endless line */
+    case 'dir': { const l = Ln(d.e), q = P(d.p); if (!l || !q) return null; const u = unit(l[1].x - l[0].x, l[1].y - l[0].y), v = d.k === 'perp' ? { x: -u.y, y: u.x } : u; return { x: q.x + v.x * G * 2, y: q.y + v.y * G * 2 }; }
     case 'x': {
       const l = Ln(d.e), m = Ln(d.e2); if (!l || !m) return null;
       const [A, B] = l, [C, D] = m, r = { x: B.x - A.x, y: B.y - A.y }, q = { x: D.x - C.x, y: D.y - C.y }, den = r.x * q.y - r.y * q.x;
@@ -625,32 +723,151 @@ function depPos(d) {
       const at = q => q && (q.n ? P(q.n) : q), C = at(d.c), Rp = at(d.r); if (!C || !Rp) return null;
       return { x: C.x, y: C.y, d: Math.max(2, 2 * Math.hypot(Rp.x - C.x, Rp.y - C.y)) };
     }
+    /* a point that slides along a line (t: 0 at a, 1 at b) or round a circle (a: angle in radians) */
+    case 'on': {
+      if (d.e) { const l = Ln(d.e); return l && { x: l[0].x + (l[1].x - l[0].x) * d.t, y: l[0].y + (l[1].y - l[0].y) * d.t }; }
+      const c = Ci(d.c); return c && { x: c.x + c.r * Math.cos(d.a), y: c.y + c.r * Math.sin(d.a) };
+    }
+    /* angle bisector at b (the vertex): a hidden helper on the ray */
+    case 'abis': {
+      const A = P(d.a), B = P(d.b), C = P(d.c); if (!A || !B || !C) return null;
+      const u1 = unit(A.x - B.x, A.y - B.y), u2 = unit(C.x - B.x, C.y - B.y); let v = { x: u1.x + u2.x, y: u1.y + u2.y };
+      if (Math.hypot(v.x, v.y) < 1e-6) v = { x: -u1.y, y: u1.x };
+      v = unit(v.x, v.y); return { x: B.x + v.x * G * 2, y: B.y + v.y * G * 2 };
+    }
+    /* the circle through three points */
+    /* centres of a triangle: k = g centroid, h orthocentre, o circumcentre, i incentre */
+    case 'tc': {
+      const A = P(d.a), B = P(d.b), C = P(d.c); if (!A || !B || !C) return null;
+      const D = 2 * (A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y)); if (Math.abs(D) < 1e-6) return null;
+      if (d.k === 'g') return { x: (A.x + B.x + C.x) / 3, y: (A.y + B.y + C.y) / 3 };
+      const s = q => q.x * q.x + q.y * q.y;
+      const O = { x: (s(A) * (B.y - C.y) + s(B) * (C.y - A.y) + s(C) * (A.y - B.y)) / D, y: (s(A) * (C.x - B.x) + s(B) * (A.x - C.x) + s(C) * (B.x - A.x)) / D };
+      if (d.k === 'o') return O;
+      if (d.k === 'h') return { x: A.x + B.x + C.x - 2 * O.x, y: A.y + B.y + C.y - 2 * O.y };
+      const a = Math.hypot(B.x - C.x, B.y - C.y), b = Math.hypot(A.x - C.x, A.y - C.y), c = Math.hypot(A.x - B.x, A.y - B.y), t = a + b + c;
+      return { x: (a * A.x + b * B.x + c * C.x) / t, y: (a * A.y + b * B.y + c * C.y) / t };
+    }
+    case 'c3': {
+      const A = P(d.a), B = P(d.b), C = P(d.c); if (!A || !B || !C) return null;
+      const D = 2 * (A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y)); if (Math.abs(D) < 1e-6) return null;
+      const s = q => q.x * q.x + q.y * q.y;
+      const x = (s(A) * (B.y - C.y) + s(B) * (C.y - A.y) + s(C) * (A.y - B.y)) / D, y = (s(A) * (C.x - B.x) + s(B) * (A.x - C.x) + s(C) * (B.x - A.x)) / D;
+      return { x, y, d: 2 * Math.hypot(A.x - x, A.y - y) };
+    }
+    /* where a tangent from p touches the circle (s = ±1: the two sides) */
+    case 'tan': {
+      const q = P(d.p), c = Ci(d.c); if (!q || !c) return null;
+      const dd = Math.hypot(q.x - c.x, q.y - c.y); if (dd <= c.r + 1e-6) return null;
+      const a = Math.atan2(q.y - c.y, q.x - c.x) + d.s * Math.acos(c.r / dd);
+      return { x: c.x + c.r * Math.cos(a), y: c.y + c.r * Math.sin(a) };
+    }
+    /* polygon interior: corners at its points */
+    case 'poly': {
+      const Q = d.pts.map(P); if (Q.length < 3 || Q.some(q => !q)) return null;
+      const b = bboxOf(Q);
+      return { x: b.cx, y: b.cy, w: Math.max(1, b.w), h: Math.max(1, b.h), pp: Q.map(q => [f2(q.x - b.cx), f2(q.y - b.cy)]) };
+    }
+    /* angle mark at b, from ba to bc (am.a0 start, am.sw signed sweep, both in screen radians) */
+    case 'angm': {
+      const A = P(d.a), B = P(d.b), C = P(d.c); if (!A || !B || !C) return null;
+      const a0 = Math.atan2(A.y - B.y, A.x - B.x), a1 = Math.atan2(C.y - B.y, C.x - B.x);
+      let sw = a1 - a0; while (sw > Math.PI) sw -= 2 * Math.PI; while (sw <= -Math.PI) sw += 2 * Math.PI;
+      const r = (self?.mr || 16) + (self?.mc === 'sq' ? 0 : ((+self?.mc || 1) - 1) * 3.5);
+      return { x: B.x, y: B.y, w: 2 * r + 4, h: 2 * r + 4, am: { a0: f2(a0 * 1000) / 1000, sw: f2(sw * 1000) / 1000 } };
+    }
+    /* image of a shape under a transform: same look, placed (and turned / scaled) by it */
+    case 'tf': {
+      const S = idx.get(d.src); if (!S || S.dead) return null;
+      const q = tfPt(d.t, S); if (!q) return null;
+      const r = { x: q.x, y: q.y };
+      if (S.k !== 'dot' && S.k !== 'text') {
+        const f = d.t.k === 'dil' ? Math.abs(d.t.f) : 1;
+        r.w = Math.max(2, S.w * f); r.h = Math.max(2, S.h * f);
+        if (d.t.k === 'rot') r.rot = ((S.rot || 0) - d.t.deg + 540) % 360 - 180;
+        else if (d.t.k === 'refl') { const l = gLine(edgeById(d.t.e)); if (l) { const th = Math.atan2(l[1].y - l[0].y, l[1].x - l[0].x) * R2D; r.rot = ((2 * th - (S.rot || 0)) % 360 + 540) % 360 - 180; } }
+        else if (d.t.k === 'dil' && d.t.f < 0) r.rot = ((S.rot || 0) + 360) % 360 - 180;
+        else r.rot = S.rot || 0;
+      }
+      return r;
+    }
+    /* a live measurement: the text says it */
+    case 'meas': { const t = measText(d); return t == null ? null : { text: t }; }
+  }
+  return null;
+}
+/* the value of a measurement and how it reads: AB = 3.20 cm, ∠ABC = 45.00°, S = 2.10 cm² … */
+/* a line's own name: its label without the maths markers */
+const lineName = e => (e && e.label ? e.label.replace(/^\$|\$$/g, '').trim() : '');
+/* measuring a line whose ends have no names: it gets a letter of its own (l, m, n ...), written on the line */
+function nameLine(e) {
+  if (lineName(e) || (e.a && e.b && ptName(e.a) && ptName(e.b))) return;
+  const used = new Set(doc.edges.map(lineName));
+  const t = ['l', 'm', 'n', 'k', 'p', 'q', 'r', 's', 'u', 'v', 'w'].find(x => !used.has(x)) || 'l';
+  e.label = '$' + t + '$';
+}
+function measText(d) {
+  const P = id => { const n = idx.get(id); return n && !n.dead ? n : null; };
+  const cm = v => fmt2(v * CM_PX), nm = (...ids) => ids.map(ptName).join('');
+  switch (d.m) {
+    case 'dist': case 'len': {
+      let a = d.a, b = d.b;
+      if (d.e) { const e = edgeById(d.e), l = gLine(e); if (!l) return null; a = e.a; b = e.b; const L = Math.hypot(l[1].x - l[0].x, l[1].y - l[0].y), N = a && b && ptName(a) && ptName(b) ? nm(a, b) : ''; return `$${N.length > 1 ? N : lineName(e) || 'l'} = ${cm(L)}\\ \\mathrm{cm}$`; }
+      const A = P(a), B = P(b); if (!A || !B) return null;
+      const N = nm(a, b); return `$${N.length > 1 ? N : 'd'} = ${cm(Math.hypot(B.x - A.x, B.y - A.y))}\\ \\mathrm{cm}$`;
+    }
+    case 'slope': { const l = gLine(edgeById(d.e)); if (!l) return null; const dx = l[1].x - l[0].x, dy = -(l[1].y - l[0].y); return Math.abs(dx) < 1e-9 ? '$m = \\infty$' : `$m = ${fmt2(dy / dx)}$`; }
+    case 'ang': {
+      const A = P(d.a), B = P(d.b), C = P(d.c); if (!A || !B || !C) return null;
+      let v = Math.abs(Math.atan2(C.y - B.y, C.x - B.x) - Math.atan2(A.y - B.y, A.x - B.x)) * R2D; if (v > 180) v = 360 - v;
+      const N = nm(d.a, d.b, d.c); return `$\\angle ${N.length > 2 ? N : ''} = ${fmt2(v)}^\\circ$`;
+    }
+    case 'area': case 'per': case 'rad': case 'circ': {
+      const n = P(d.n); if (!n) return null;
+      if (n.k === 'circle') {
+        const r = (n.w + n.h) / 4 * CM_PX;
+        if (d.m === 'rad') return `$r = ${fmt2(r)}\\ \\mathrm{cm}$`;
+        if (d.m === 'area') return `$S = ${fmt2(Math.PI * r * r)}\\ \\mathrm{cm}^2$`;
+        return `$C = ${fmt2(2 * Math.PI * r)}\\ \\mathrm{cm}$`;
+      }
+      if (n.k !== 'poly' || !n.pp) return null;
+      const Q = n.pp, N = (n.dep?.pts || []).map(ptName).join('');
+      if (d.m === 'area') { let s = 0; Q.forEach((q, i) => { const r2 = Q[(i + 1) % Q.length]; s += q[0] * r2[1] - r2[0] * q[1]; }); return `$S${N.length > 2 ? `_{${N}}` : ''} = ${fmt2(Math.abs(s) / 2 * CM_PX * CM_PX)}\\ \\mathrm{cm}^2$`; }
+      let s = 0; Q.forEach((q, i) => { const r2 = Q[(i + 1) % Q.length]; s += Math.hypot(r2[0] - q[0], r2[1] - q[1]); }); return `$P${N.length > 2 ? `_{${N}}` : ''} = ${fmt2(s * CM_PX)}\\ \\mathrm{cm}$`;
+    }
+    case 'coord': { const A = P(d.p); if (!A) return null; const N = ptName(d.p); return `$${N}(${fmt2(A.x / G)},\\ ${fmt2(-A.y / G)})$`; }
   }
   return null;
 }
 function solveDeps() {
   const ds = doc.nodes.filter(n => n.dep); if (!ds.length) return;
-  for (let pass = 0; pass < 5; pass++) {
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+  for (let pass = 0; pass < 8; pass++) {
     let ch = false;
     for (const n of ds) {
-      const r = depPos(n.dep);
+      const r = depPos(n.dep, n);
       if (!r) { if (!n.dead) { n.dead = true; ch = true; } continue; }
       if (n.dead) { delete n.dead; ch = true; }
-      if (Math.abs(r.x - n.x) > 1e-6 || Math.abs(r.y - n.y) > 1e-6) { n.x = r.x; n.y = r.y; ch = true; }
-      if (r.d && Math.abs(r.d - n.w) > 1e-6) { n.w = n.h = r.d; ch = true; }
+      if (r.x != null && (!near(r.x, n.x) || !near(r.y, n.y))) { n.x = r.x; n.y = r.y; ch = true; }
+      if (r.d && !near(r.d, n.w)) { n.w = n.h = r.d; ch = true; }
+      if (r.w != null && (!near(r.w, n.w) || !near(r.h, n.h))) { n.w = r.w; n.h = r.h; ch = true; }
+      if (r.rot != null && !near(r.rot, n.rot || 0)) { n.rot = r.rot; ch = true; }
+      if (r.pp && JSON.stringify(r.pp) !== JSON.stringify(n.pp)) { n.pp = r.pp; ch = true; }
+      if (r.am && JSON.stringify(r.am) !== JSON.stringify(n.am)) { n.am = r.am; ch = true; }
+      if (r.text != null && r.text !== n.text) { n.text = r.text; ch = true; }
     }
     if (!ch) break;
   }
 }
 /* copies keep their construction only when everything it names was copied too (else they become free) */
 function remapDep(d, nm, em, off = 0) {
-  const o = clone(d);
-  for (const k of ['e', 'e2']) if (typeof o[k] === 'string') { if (!em[o[k]]) return null; o[k] = em[o[k]]; }
-  for (const k of ['p', 'a', 'b', 'n', 'c', 'c1', 'c2']) if (typeof o[k] === 'string') { if (!nm[o[k]]) return null; o[k] = nm[o[k]]; }
-  for (const k of ['c', 'r']) if (o[k] && typeof o[k] === 'object') { if (o[k].n) { if (!nm[o[k].n]) return null; o[k] = { n: nm[o[k].n] }; } else o[k] = { x: o[k].x + off, y: o[k].y + off }; }
+  const o = clone(d); let ok = true;
+  depWalk(o, (v, set) => { const m = isEdgeId(v) ? em[v] : nm[v]; if (m) set(m); else ok = false; });
+  if (!ok) return null;
+  for (const k of ['c', 'r']) if (o[k] && typeof o[k] === 'object' && !o[k].n && o[k].x != null) o[k] = { x: o[k].x + off, y: o[k].y + off };
   return o;
 }
-function remapDeps(made, nm, em, off) { for (const m of made) if (m.dep) { const d = remapDep(m.dep, nm, em, off); if (d) m.dep = d; else { delete m.dep; delete m.dead; } } }
+function remapDeps(made, nm, em, off) { for (const m of made) if (m.dep) { const d = remapDep(m.dep, nm, em, off); if (d) m.dep = d; else { delete m.dep; delete m.dead; delete m.hid; } } }
 const headLen = sw => 6 + sw * 2.4;
 const HEADS = ['none', 'vee', 'tri', 'otri', 'two', 'circ', 'ocirc', 'bar', 'hook', 'ray'];
 /* head size for a line: a double line gets a head wide enough to cover both rails (like ⇒) */
@@ -775,6 +992,7 @@ function routeGeom(e, A, B, ta, tb, cs, ce) {
 function edgeGeom(e) {
   const A0 = endPt(e, 'a'), B0 = endPt(e, 'b');
   if (A0.n && A0.n === B0.n) return loopGeom(e, A0.n);
+  if (e.route === 'carc') { const ag = arcGeom(e, A0, B0); if (ag) return ag; }
   const cs = cutFor(e.tail, e), ce = cutFor(e.head, e);
   const ta = A0.n ? portTip(e, 'a', A0.n, cs) : null, tb = B0.n ? portTip(e, 'b', B0.n, ce) : null;
   const A = ta ? { x: ta.p.x, y: ta.p.y, n: null } : A0, B = tb ? { x: tb.p.x, y: tb.p.y, n: null } : B0;
@@ -843,12 +1061,19 @@ function edgeMarkup(e, g, interactive) {
     s += `<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${f2(r.S.x)}" y1="${f2(r.S.y)}" x2="${f2(r.F.x)}" y2="${f2(r.F.y)}"><stop offset="0" stop-color="${col}"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>`
       + `<path class="ep" d="M${f2(r.S.x)},${f2(r.S.y)}L${f2(r.F.x)},${f2(r.F.y)}" stroke="url(#${id})" stroke-width="${sw}" fill="none" ${dashArr(e.dash, sw)}/>`;
   }
+  if (e.tick) s += tickMarkup(e, g);
   s += headMarkup(e.head, g.Q, g.dE, sw, col, e) + headMarkup(e.tail, g.P, { x: -g.dS.x, y: -g.dS.y }, sw, col, e);
   if (!interactive) return s;
   return `<g data-e="${e.id}" class="${sel.has(e.id) ? 'sel' : ''}"><path class="hit" d="${g.d}" stroke-width="14" vector-effect="non-scaling-stroke"/>${s}</g>`;
 }
 const labOff = (n, w, h) => { if (n.k !== 'tri') return { x: 0, y: 0 }; const d = n.dir || 'up'; return d === 'up' ? { x: 0, y: h / 6 } : d === 'down' ? { x: 0, y: -h / 6 } : d === 'right' ? { x: -w / 6, y: 0 } : { x: w / 6, y: 0 }; };
 /* a point on the line's own curve at parameter t (Bézier parameter, or share of the length on a polyline) and the normal on its left */
+/* box / lasso: both ends' shapes inside, or ~30% of the line inside (a point with its two sides, for geometry) */
+function takesLine(ed, g, inside) {
+  if (ed.a && ed.b && sel.has(ed.a) && sel.has(ed.b)) return true;
+  let k = 0; try { for (let i = 0; i <= 20; i++) { const c = curveAt(g, i / 20); if (c && inside(c.p || c)) k++; } } catch { return false; }
+  return k >= 6;
+}
 function curveAt(g, t) {
   let p, a, b;
   if (g.K) { p = bez(g.K, t); a = bez(g.K, Math.max(0, t - .01)); b = bez(g.K, Math.min(1, t + .01)); }
@@ -904,7 +1129,7 @@ function olSideAt(n, q) { const { hx, hy } = olBox(n), dx = (q.x - n.x) / (hx + 
 /* a shape whose box holds p even where its outline does not (the corners round an ellipse or a diamond): writing there means its own text */
 function boxHit(p) {
   for (let i = doc.nodes.length - 1; i >= 0; i--) {
-    const n = doc.nodes[i]; if (n.k === 'dot' || n.k === 'image' || n.dep?.op === 'circ') continue;
+    const n = doc.nodes[i]; if (n.k === 'dot' || n.k === 'image' || n.hid || n.k === 'poly' || n.k === 'mark' || ringOnly(n)) continue;
     const { hx, hy } = olBox(n); if (Math.abs(p.x - n.x) <= hx && Math.abs(p.y - n.y) <= hy) return n;
   }
   return null;
@@ -951,7 +1176,7 @@ function paintNode(n, el, i) {
   if (!isEd && el._t !== t) { lab.innerHTML = texHTML(t); el._t = t; }
   const tsk = JSON.stringify(n.ts);
   if (el._ts !== tsk) { styleLab(lab, n.ts); el._ts = tsk; }
-  lab.hidden = n.k === 'image' || n.k === 'dot';
+  lab.hidden = n.k === 'image' || n.k === 'dot' || n.k === 'poly' || n.k === 'mark';
   el.classList.toggle('dep', !!n.dep); el.classList.toggle('dead', !!n.dead);
   let m;
   if (isEd) m = { w: lab.offsetWidth, h: lab.offsetHeight };
@@ -962,10 +1187,10 @@ function paintNode(n, el, i) {
   geo.set(n.id, { w, h, need });
   /* free-standing text hides the grid dots behind it (not over another shape, not while writing) */
   el.classList.toggle('bk', n.k === 'text' && !!t && !isEd && !doc.nodes.some(o => o !== n && o.k !== 'text' && Math.abs(o.x - n.x) * 2 < w + (geo.get(o.id)?.w ?? o.w) && Math.abs(o.y - n.y) * 2 < h + (geo.get(o.id)?.h ?? o.h)));
-  el.style.cssText = `left:${n.x - w / 2}px;top:${n.y - h / 2}px;width:${w}px;height:${h}px;z-index:${i};transform:rotate(${n.rot || 0}deg)`;
+  el.style.cssText = `${n.hid ? 'display:none;' : ''}left:${n.x - w / 2}px;top:${n.y - h / 2}px;width:${w}px;height:${h}px;z-index:${n.k === 'poly' ? -1 : i};transform:rotate(${n.rot || 0}deg)`;
   const { x: sx, y: sy } = labOff(n, w, h);
   lab.style.transform = `translate(calc(-50% + ${f2(sx)}px), calc(-50% + ${f2(sy)}px))`;
-  const skey = [n.k, f2(w), f2(h), n.fill, n.stroke, n.sw, n.dbl, n.sd, n.rad, n.dir, n.img].join('|');
+  const skey = [n.k, f2(w), f2(h), n.fill, n.stroke, n.sw, n.dbl, n.sd, n.rad, n.dir, n.img, n.fo, n.mc, n.mr, n.pp || n.am ? JSON.stringify(n.pp || n.am) : ''].join('|');
   if (el._s !== skey) { svg.setAttribute('width', w); svg.setAttribute('height', h); svg.innerHTML = shapeMarkup(n, w, h, n.id, urlOf); el._s = skey; }
   if (n.img) { const im = svg.querySelector('svg.im'); if (im) { const c = cropOf(n); im.setAttribute('viewBox', `${c.x} ${c.y} ${c.w} ${c.h}`); } }
 }
@@ -1099,7 +1324,7 @@ function drawOverlay() {
     const g = egeo.get(e.id) || edgeGeom(e), P = S(g.P), Q = S(g.Q), M = S(g.mid);
     if (g.c1 && e.route === 'bez') {
       if (!drag || drag.t === 'ctl') { const c1 = S(g.c1), c2 = S(g.c2); s += `<line class="o-ctl" x1="${f2(P.x)}" y1="${f2(P.y)}" x2="${f2(c1.x)}" y2="${f2(c1.y)}"/><line class="o-ctl" x1="${f2(Q.x)}" y1="${f2(Q.y)}" x2="${f2(c2.x)}" y2="${f2(c2.y)}"/><rect class="o-bend o-cpt h" data-h="c1" data-e="${e.id}" x="${f2(c1.x - 4.5)}" y="${f2(c1.y - 4.5)}" width="9" height="9" rx="2.5"/><rect class="o-bend o-cpt h" data-h="c2" data-e="${e.id}" x="${f2(c2.x - 4.5)}" y="${f2(c2.y - 4.5)}" width="9" height="9" rx="2.5"/>`; }
-    } else if (g.pts) { if (!drag || drag.t === 'ctl') s += `<circle class="o-bend h" data-h="elb" data-e="${e.id}" cx="${f2(M.x)}" cy="${f2(M.y)}" r="5" style="cursor:${elbH(e, g.A || endPt(e, 'a'), g.B || endPt(e, 'b')) ? 'ew-resize' : 'ns-resize'}"/>`; }
+    } else if (e.route === 'carc') { /* an arc follows its points */ } else if (g.pts) { if (!drag || drag.t === 'ctl') s += `<circle class="o-bend h" data-h="elb" data-e="${e.id}" cx="${f2(M.x)}" cy="${f2(M.y)}" r="5" style="cursor:${elbH(e, g.A || endPt(e, 'a'), g.B || endPt(e, 'b')) ? 'ew-resize' : 'ns-resize'}"/>`; }
     else if (g.c1) { /* S-curve: nothing to drag */ }
     else if (!drag || drag.t === 'bend' || drag.t === 'loop') s += `<circle class="o-bend h" data-h="${g.loop ? 'loop' : 'bend'}" data-e="${e.id}" cx="${f2(M.x)}" cy="${f2(M.y)}" r="5"/>`;
     if (!g.loop && (!drag || drag.t === 'end')) {
@@ -1107,6 +1332,7 @@ function drawOverlay() {
       s += `<circle class="o-ep h ${e.b ? '' : 'free'}" data-h="end" data-w="b" data-e="${e.id}" cx="${f2(Q.x)}" cy="${f2(Q.y)}" r="4.5"/>`;
     }
   }
+  s += tfMarkOverlay();
   for (const [id, w, q] of pend) s += `<circle class="o-ep o-pend h" data-h="end" data-w="${w}" data-e="${id}" cx="${f2(q.x)}" cy="${f2(q.y)}" r="3.6"/>`;
   if (drag?.mag && PV && pvG) { const q = S(PV.w === 'a' ? pvG.P : pvG.Q); s += `<circle class="o-mag" cx="${f2(q.x)}" cy="${f2(q.y)}" r="6" style="${pvAge()}"/>`; }
   // drags in progress
@@ -1369,6 +1595,14 @@ function newEdge(a, b, pa, pb) {
   const e = { id: 'e' + uid(), a: a ? a.id : null, b: b ? b.id : null, ...edgeStyle() };
   if (a && a === b) delete e.route;
   if (!a) e.pa = pa; if (!b) e.pb = pb;
+  if (stamp && /^geo-/.test(stamp.id)) for (const w of ['a', 'b']) {
+    const q = e['p' + w]; if (!q) continue;
+    let d = looseDot(q);
+    if (!d) { d = newNode('dot', q.x, q.y); doc.nodes.push(d); idx.set(d.id, d); autoName(d); }
+    e[w] = d.id; delete e['p' + w];
+    /* other loose ends on that spot join the point too */
+    for (const o of doc.edges) for (const v of ['a', 'b']) { const r = !o[v] && o['p' + v]; if (r && Math.hypot(r.x - q.x, r.y - q.y) < 3) { o[v] = d.id; delete o['p' + v]; } }
+  }
   if (a && b && a === b) {
     const used = doc.edges.filter(x => x.a === a.id && x.b === a.id).map(x => x.la ?? -90);
     e.la = [-90, 90, 0, 180, -45, -135].find(t => !used.includes(t)) ?? -90;
@@ -1386,6 +1620,7 @@ function newEdge(a, b, pa, pb) {
    (like ZX Draw): the smallest bend, on the freer side, that keeps 8px from every shape it is not wired to.
    A straight line that only passes close by (no touch, 2px) stays straight.
    Shapes that hold a or b (a frame around them), pictures and text are ignored. */
+const looseDot = q => doc.nodes.find(n => n.k === 'dot' && !n.hid && Math.hypot(n.x - q.x, n.y - q.y) < 4) || null;
 function avoidBend(a, b, gone) {
   const L = Math.hypot(b.x - a.x, b.y - a.y); if (L < 1) return 0;
   const nx = (b.y - a.y) / L, ny = -(b.x - a.x) / L, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
@@ -1448,6 +1683,8 @@ function deleteSel() {
     for (const n of selNodes()) bridgeOut(n, gone);
     doc.nodes = doc.nodes.filter(n => !gone.has(n.id));
     doc.edges = doc.edges.filter(e => !gone.has(e.id) && !gone.has(e.a) && !gone.has(e.b));
+    for (const e of doc.edges) if (e.route === 'carc' && (gone.has(e.cen) || gone.has(e.thru))) { delete e.route; delete e.cen; delete e.thru; }
+    dropOrphans();
     sel.clear();
   });
 }
@@ -1484,6 +1721,7 @@ function pasteClip(c, off) {
       const m = { ...clone(e), id: 'e' + uid(), a: e.a ? map[e.a] : null, b: e.b ? map[e.b] : null };
       if (m.pa) m.pa = { x: m.pa.x + off, y: m.pa.y + off }; if (m.pb) m.pb = { x: m.pb.x + off, y: m.pb.y + off };
       if ((e.a && !m.a) || (e.b && !m.b)) continue;
+      remapArc(m, map);
       emap[e.id] = m.id; doc.edges.push(m); sel.add(m.id);
     }
     remapDeps(made, map, emap, off);
@@ -1503,7 +1741,7 @@ function order(where) {
 }
 
 /* ================= tools ================= */
-const TOOLS = ['select', 'hand', 'circle', 'rect', 'tri', 'diamond', 'dot', 'text', 'edge', 'compass', 'image', 'laser'];
+const TOOLS = ['select', 'hand', 'circle', 'rect', 'tri', 'diamond', 'gate', 'dot', 'text', 'edge', 'compass', 'image', 'laser'];
 let compassPend = null, compassAt = null;
 const refPt = q => (q.n ? idx.get(q.n) || { x: 0, y: 0 } : q);
 const compassRef = (p, c) => { const n = hitNode(p); return n && n.k !== 'image' && !(c && c.n === n.id) ? { n: n.id } : snapP(p); };
@@ -1515,7 +1753,7 @@ function makeCircle(c, r) {
     doc.nodes.push(n); sel.clear(); sel.add(n.id);
   });
 }
-const SHAPES = ['circle', 'rect', 'tri', 'diamond'];
+const SHAPES = ['circle', 'rect', 'tri', 'diamond', 'gate'];
 const PEEK = new Set(['select', 'laser']);
 let subPeek = false;
 function setTool(t, fromUser) {
@@ -1667,7 +1905,9 @@ vp.addEventListener('pointerdown', e => {
     if (lb) { const ed = edgeById(lb.dataset.e); if (ed) { const was = sel.has(ed.id); if (!was) selectOnly(ed.id); drag = { t: 'elab', e: ed, before: snap(), sp, again: was }; return; } }
   }
   const elab = e.target.closest('.elab'), olN = e.target.closest('.olab');
-  const n = elab ? null : olN ? idx.get(olN.dataset.n) : hitNode(p);
+  let n = elab ? null : olN ? idx.get(olN.dataset.n) : hitNode(p);
+  /* a polygon's interior never hides its own sides */
+  if (n && n.k === 'poly' && e.target.closest('[data-e]')) n = null;
   const eg = elab || (!n && e.target.closest('[data-e]'));
   const eid = (eg ? eg.dataset.e : null);
 
@@ -1695,9 +1935,14 @@ vp.addEventListener('pointerdown', e => {
     drag = { t: 'compass', c: n && n.k !== 'image' ? { n: n.id } : snapP(p), p, sp, moved: false }; drawOverlay(); return;
   }
   if (tool === 'dot') {
+    /* on a line or circle (or where two meet) the new point is built on them */
+    /* on the loose ends of lines: a point that is their shared end (a vertex), not a point built on them */
+    if (!(n && n.k === 'dot')) { const lo = looseAt(p); if (lo.length) { const at = lo[0].q; mutate(() => { const d = newNode('dot', at.x, at.y); doc.nodes.push(d); idx.set(d.id, d); lo.forEach(({ e, w }) => { e[w] = d.id; delete e['p' + w]; }); autoName(d); sel.clear(); sel.add(d.id); }); drag = { t: 'none' }; return; } }
+    if (!(n && n.k === 'dot')) { const on = dotOnto(p); if (on) { placePoint(on); drag = { t: 'none' }; return; } }
+    if (n && (n.k === 'poly' || n.k === 'mark')) n = null;
     if (n) { pressNode(n, p, sp, e); return; }
     if (eid) { selectOnly(eid); drag = { t: 'none' }; return; }
-    const q = snapP(p); mutate(() => { const d = newNode('dot', q.x, q.y); doc.nodes.push(d); sel.clear(); sel.add(d.id); });
+    const q = snapP(p); mutate(() => { const d = newNode('dot', q.x, q.y); doc.nodes.push(d); autoName(d); sel.clear(); sel.add(d.id); });
     drag = { t: 'none' }; return;
   }
   if (SHAPES.includes(tool) || tool === 'text') {
@@ -1716,7 +1961,7 @@ vp.addEventListener('pointerdown', e => {
     const was = sel.has(eid);
     if (!was) selectOnly(eid);
     const ed = edgeById(eid);
-    if (ed && !ed.a && !ed.b) { startMove(p, sp, null, e); drag.again = was; return; }
+    if (ed && ((!ed.a && !ed.b) || dotEnds(ed))) { startMove(p, sp, null, e); drag.again = was; return; }
     drag = { t: 'none', again: was }; return;
   }
   if (!e.shiftKey) sel.clear();
@@ -1741,12 +1986,12 @@ function startMove(p, sp, primary, e) {
     const ids = new Set(c.nodes.map(n => n.id)); sel.clear();
     const emap = {}, made = [];
     for (const n of c.nodes) { const m = { ...clone(n), id: 'n' + uid() }; map[n.id] = m.id; doc.nodes.push(m); made.push(m); sel.add(m.id); }
-    for (const ed of c.edges) { const m = { ...clone(ed), id: 'e' + uid(), a: ed.a ? map[ed.a] : null, b: ed.b ? map[ed.b] : null }; emap[ed.id] = m.id; doc.edges.push(m); sel.add(m.id); }
+    for (const ed of c.edges) { const m = { ...clone(ed), id: 'e' + uid(), a: ed.a ? map[ed.a] : null, b: ed.b ? map[ed.b] : null }; remapArc(m, map); emap[ed.id] = m.id; doc.edges.push(m); sel.add(m.id); }
     remapDeps(made, map, emap, 0);
     if (primary && ids.has(primary.id)) primary = doc.nodes.find(x => x.id === map[primary.id]);
     render(); vp.classList.add('copying');
   }
-  const orig = new Map(selNodes().filter(n => !n.dep).map(n => [n.id, { x: n.x, y: n.y }]));
+  const orig = new Map(moveSet().map(n => [n.id, { x: n.x, y: n.y }]));
   const eorig = new Map(selEdges().map(ed => [ed.id, { pa: ed.pa && { ...ed.pa }, pb: ed.pb && { ...ed.pb } }]));
   drag = { t: 'move', s: p, sp, before, orig, eorig, primary, moved: false, clickId: primary?.id };
 }
@@ -1815,14 +2060,14 @@ vp.addEventListener('pointermove', e => {
       render(); break;
     }
     case 'pan': cam.x = drag.cx + sp.x - drag.sx; cam.y = drag.cy + sp.y - drag.sy; applyCam(); break;
-    case 'move': moveDrag(p); break;
+    case 'move': drag.noAng = e.shiftKey; moveDrag(p); break;
     case 'compass': drag.p = p; hov = hitNode(p); drawOverlay(); break;
     case 'marq': {
       drag.p = p; const l = Math.min(drag.s.x, p.x), r = Math.max(drag.s.x, p.x), t = Math.min(drag.s.y, p.y), b = Math.max(drag.s.y, p.y);
       const inR = q => q.x >= l && q.x <= r && q.y >= t && q.y <= b;
       sel = new Set(drag.base);
       for (const n of doc.nodes) if (corners(n).every(inR)) sel.add(n.id);
-      for (const ed of doc.edges) { const g = egeo.get(ed.id); if (g && inR(g.P) && inR(g.Q)) sel.add(ed.id); }
+      for (const ed of doc.edges) { const g = egeo.get(ed.id); if (g && ((inR(g.P) && inR(g.Q)) || takesLine(ed, g, inR))) sel.add(ed.id); }
       drawEdges(); drawOverlay(); break;
     }
     case 'lasso': {
@@ -1832,7 +2077,7 @@ vp.addEventListener('pointermove', e => {
       sel = new Set(drag.base);
       if (P.length > 2) {
         for (const n of doc.nodes) if (pip(P, n)) sel.add(n.id);
-        for (const ed of doc.edges) if (egeo.get(ed.id) && pip(P, egeo.get(ed.id).mid)) sel.add(ed.id);
+        for (const ed of doc.edges) { const g = egeo.get(ed.id); if (g && (pip(P, g.mid) || takesLine(ed, g, q => pip(P, q)))) sel.add(ed.id); }
       }
       drawEdges(); drawOverlay(); break;
     }
@@ -1886,7 +2131,8 @@ vp.addEventListener('pointermove', e => {
       if (drag.w === 'elb') {
         const h = elbH(ed, A, B), den = h ? B.x - A.x : B.y - A.y;
         let m = Math.abs(den) < 1 ? .5 : ((h ? p.x - A.x : p.y - A.y) / den);
-        if (prefs.magnet && !e.shiftKey && Math.abs(m - .5) * Math.abs(den) * cam.z < 7) m = .5;
+        guides = [];
+        if (prefs.magnet && !e.shiftKey && Math.abs(den) >= 1) m = elbSnap(ed, h, A, B, m, den);
         ed.ek = h ? 'h' : 'v'; ed.em = Math.round(clamp(m, -1, 2) * 1000) / 1000;
       } else ed[drag.w] = ctlOf(A, B, p);
       render(); break;
@@ -1919,13 +2165,34 @@ function moveDrag(p) {
   if (step() && pr) { dx = snapV(pr.x + dx) - pr.x; dy = snapV(pr.y + dy) - pr.y; }
   else if (step()) { dx = snapV(dx); dy = snapV(dy); }
   else if (prefs.magnet && drag.orig.size) ({ dx, dy } = alignSnap(dx, dy));
-  for (const n of doc.nodes) { const o = drag.orig.get(n.id); if (o) { n.x = o.x + dx; n.y = o.y + dy; } }
+  if (prefs.magnet && !drag.noAng && pr && drag.orig.size === 1 && drag.primary.k === 'dot') { const q = angSnap(drag.primary, { x: pr.x + dx, y: pr.y + dy }); dx = q.x - pr.x; dy = q.y - pr.y; }
+  for (const n of doc.nodes) { const o = drag.orig.get(n.id); if (o) { n.x = o.x + dx; n.y = o.y + dy; if (n.dep?.op === 'on') slideOn(n); } }
   for (const ed of doc.edges) {
     const o = drag.eorig.get(ed.id); if (!o) continue;
     if (o.pa && !ed.a) ed.pa = { x: o.pa.x + dx, y: o.pa.y + dy };
     if (o.pb && !ed.b) ed.pb = { x: o.pb.x + dx, y: o.pb.y + dy };
   }
   render();
+}
+/* elbow middle step: soft pull to the half-way point, both ends and every shape's sides / centre (with a guide) */
+function elbSnap(ed, h, A, B, m, den) {
+  const v = (h ? A.x : A.y) + den * m, thr = 7 / cam.z;
+  let best = null;
+  const tryV = (c, box) => { const d = Math.abs(c - v); if (d < thr && (!best || d < best.d)) best = { c, d, box }; };
+  tryV((h ? A.x + B.x : A.y + B.y) / 2, null);
+  tryV(h ? A.x : A.y, A); tryV(h ? B.x : B.y, B);
+  for (const n of doc.nodes) {
+    if (n.id === ed.a || n.id === ed.b) continue;
+    const b = bboxOf(corners(n));
+    for (const c of h ? [b.l, b.cx, b.r] : [b.t, b.cy, b.b]) tryV(c, b);
+  }
+  if (!best) return m;
+  if (best.box) {
+    const lo = Math.min(A[h ? 'y' : 'x'], B[h ? 'y' : 'x'], best.box.x != null ? best.box[h ? 'y' : 'x'] : (h ? best.box.t : best.box.l)) - 10;
+    const hi = Math.max(A[h ? 'y' : 'x'], B[h ? 'y' : 'x'], best.box.x != null ? best.box[h ? 'y' : 'x'] : (h ? best.box.b : best.box.r)) + 10;
+    guides.push(h ? [{ x: best.c, y: lo }, { x: best.c, y: hi }] : [{ x: lo, y: best.c }, { x: hi, y: best.c }]);
+  }
+  return (best.c - (h ? A.x : A.y)) / den;
 }
 /* free placement: snap the moving group's edges / centre to other nodes', with red guides */
 function alignSnap(dx, dy) {
@@ -1961,6 +2228,39 @@ function resizeDrag(p, e) {
   const c = ctr ? { x: 0, y: 0 } : rotv(hx * nw / 2, hy * nh / 2, rot);
   n.x = anchor.x + c.x; n.y = anchor.y + c.y; n.w = nw; n.h = nh;
   render();
+}
+function angSnap(n, q) {
+  const thr = 7 / cam.z, cands = [];
+  for (const e of doc.edges) {
+    if (e.route && e.route !== 'arc' || e.bend || (e.a !== n.id && e.b !== n.id) || e.a === e.b) continue;
+    const ow = e.a === n.id ? 'b' : 'a', O = endPt(e, ow); if (O.n && O.n.dead) continue;
+    const L = Math.hypot(q.x - O.x, q.y - O.y); if (L < 12 / cam.z) continue;
+    const th = Math.atan2(q.y - O.y, q.x - O.x);
+    const refs = [0];
+    if (O.n) for (const f of doc.edges) {
+      if (f === e || f.route && f.route !== 'arc' || f.bend) continue;
+      const w = f.a === O.n.id ? 'b' : f.b === O.n.id ? 'a' : null; if (!w || f[w] === n.id) continue;
+      const Q = endPt(f, w); refs.push(Math.atan2(Q.y - O.y, Q.x - O.x));
+    }
+    let best = null;
+    for (const r of refs) {
+      const t = r + Math.round((th - r) / (Math.PI / 12)) * (Math.PI / 12), d = Math.abs(Math.sin(th - t)) * L;
+      if (d < thr && (!best || d < best.d)) best = { d, O, t, L };
+    }
+    if (best) cands.push(best);
+  }
+  if (!cands.length) return q;
+  cands.sort((a, b) => a.d - b.d);
+  const ray = c => ({ x: c.O.x + Math.cos(c.t) * c.L, y: c.O.y + Math.sin(c.t) * c.L });
+  const guide = (c, p) => { const ux = Math.cos(c.t), uy = Math.sin(c.t), far = Math.hypot(p.x - c.O.x, p.y - c.O.y) + 18 / cam.z; guides.push([{ x: c.O.x, y: c.O.y }, { x: c.O.x + ux * far, y: c.O.y + uy * far }]); };
+  /* two lines snapping at once: where both rays meet, if that is close */
+  for (let i = 0; i < cands.length; i++) for (let j = i + 1; j < cands.length; j++) {
+    const A = cands[i], B = cands[j], ax = Math.cos(A.t), ay = Math.sin(A.t), bx = Math.cos(B.t), by = Math.sin(B.t), den = ax * by - ay * bx;
+    if (Math.abs(den) < 1e-6) continue;
+    const s = ((B.O.x - A.O.x) * by - (B.O.y - A.O.y) * bx) / den, X = { x: A.O.x + ax * s, y: A.O.y + ay * s };
+    if (s > 0 && Math.hypot(X.x - q.x, X.y - q.y) < thr * 1.5) { guide(A, X); guide(B, X); return X; }
+  }
+  const p = ray(cands[0]); guide(cands[0], p); return p;
 }
 function magnetAngle(a) {
   const t = Math.round(a / 15) * 15, d = Math.abs(a - t);
@@ -2158,6 +2458,14 @@ function createText(p) {
   doc.nodes.push(n); sel.clear(); sel.add(n.id); render();
   editNode(n, before);
 }
+/* start of an edit: select the text, or only what sits between $…$ / \(…\) / \[…\] when the whole text is one formula */
+function selectInner(lab) {
+  const r = document.createRange(), t = lab.firstChild, v = lab.textContent || '';
+  const m = /^(\$\$|\$|\\\(|\\\[)([\s\S]*?)(\$\$|\$|\\\)|\\\])$/.exec(v);
+  if (m && t && t.nodeType === 3 && v.length > m[1].length + m[3].length) { r.setStart(t, m[1].length); r.setEnd(t, v.length - m[3].length); }
+  else r.selectNodeContents(lab);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
 function editNode(n, before) {
   if (n.k === 'image' || n.k === 'dot') return;
   endEdit();
@@ -2170,7 +2478,7 @@ function editNode(n, before) {
   el._t = null;
   sel.clear(); sel.add(n.id);
   lab.focus();
-  const r = document.createRange(); r.selectNodeContents(lab); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  selectInner(lab);
   lab.oninput = () => { n.text = lab.innerText.replace(/\n$/, ''); render(); };
   lab.onkeydown = ev => {
     ev.stopPropagation();
@@ -2208,7 +2516,7 @@ function inlineEdit(lab, text, set) {
   lab.classList.add('editing');
   lab.textContent = text || '';
   lab.focus();
-  const r = document.createRange(); r.selectNodeContents(lab); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r);
+  selectInner(lab);
   lab.oninput = () => { set(lab.innerText.replace(/\n$/, '')); render(); };
   lab.onkeydown = ev => { ev.stopPropagation(); if (ev.key === 'Escape' || (ev.key === 'Enter' && !ev.shiftKey)) { ev.preventDefault(); endEdit(); } };
   lab.onpaste = ev => { ev.preventDefault(); document.execCommand('insertText', false, ev.clipboardData.getData('text/plain')); };
@@ -2406,7 +2714,7 @@ function updateBar() {
   if (drag && drag.moved) { hideBar(); return; }
   bar.classList.remove('hide');
   let h = '';
-  const dots = ns.filter(n => n.k === 'dot'), shapes = ns.filter(n => n.k !== 'text' && n.k !== 'image' && n.k !== 'dot'), texts = ns.filter(n => n.k !== 'image' && n.k !== 'dot'), imgs = ns.filter(n => n.k === 'image');
+  const dots = ns.filter(n => n.k === 'dot'), shapes = ns.filter(n => n.k !== 'text' && n.k !== 'image' && n.k !== 'dot'), texts = ns.filter(n => n.k !== 'image' && n.k !== 'dot' && n.k !== 'poly' && n.k !== 'mark'), imgs = ns.filter(n => n.k === 'image');
   /* colour group */
   /* fill and text colour live in the second row when it shows them; no duplicate chip here */
   if (shapes.length && es.length) h += bb('data-p="fill"', chip(common(shapes, n => n.fill) ?? '#ddd'), 'Fill');
@@ -2416,7 +2724,7 @@ function updateBar() {
   else if (shapes.length || imgs.length || es.length) h += bb('data-p="stroke"', chip(common([...shapes, ...imgs], n => n.stroke) ?? common(es, e => e.color) ?? '#1d1d1f', true), es.length && !ns.length ? 'Line colour' : 'Border: colour, width, style, double');
   if (texts.length && !es.length && shapes.length) h += bb('data-p="tcolor"', `<span class="tchip" style="--c:${common(texts, n => n.ts.color) ?? '#1d1d1f'}">A</span>`, 'Text colour');
   if (ns.length && !es.length) {
-    if (shapes.length) h += bsep + bb('data-p="shape"', shapes.length === 1 ? small(IC[shapes[0].k]) : IC.shape, 'Shape: kind, direction, corners');
+    if (shapes.length && shapes.every(n => IC[n.k])) h += bsep + bb('data-p="shape"', shapes.length === 1 ? small(IC[shapes[0].k]) : IC.shape, 'Shape: kind, direction, corners');
     /* text group */
     if (texts.length) {
       const sz = common(texts, n => n.ts.size), g = f => common(texts, n => f(n.ts));
@@ -2440,7 +2748,7 @@ function updateBar() {
     if (es.length === 1) h += bb('data-p="label"', IC.label, 'Label (double-click the line)');
     h += bsep + bb('data-a="flip"', IC.swap, 'Reverse direction') + bb('data-a="straight"', IC.straight, 'Straighten');
   }
-  h += bsep + bb('data-a="dupl"', IC.dup, 'Duplicate (' + MOD + 'D)') + bb('data-a="del"', IC.trash, 'Delete (⌫)') + bb('data-m="more"', IC.more, 'More');
+  h += (geoItems().length ? bsep + bb('data-m="geo"', GEO_IC.compass, 'Construct · transform · measure') : '') + bsep + bb('data-a="dupl"', IC.dup, 'Duplicate (' + MOD + 'D)') + bb('data-a="del"', IC.trash, 'Delete (⌫)') + bb('data-m="more"', IC.more, 'More');
   /* second row: the common choices, one click each */
   let r2 = '';
   if (dots.length && dots.length === ns.length && !es.length) {
@@ -2493,7 +2801,7 @@ bar.addEventListener('pointerdown', e => e.stopPropagation());
 bar.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.p) { clearTimeout(hovT); if (ppKey === b.dataset.p) { if (ppHover) { ppHover = false; return; } closePP(); } else openPP(b.dataset.p, b); return; }
-  if (b.dataset.m) { const r = b.getBoundingClientRect(); ctxItems(r.left, r.bottom + 6, true); return; }
+  if (b.dataset.m) { const r = b.getBoundingClientRect(); if (b.dataset.m === 'geo') showMenu(r.left, r.bottom + 6, geoItems()); else ctxItems(r.left, r.bottom + 6, true); return; }
   if (b.dataset.a === 'layx') { layOpen = !layOpen; updateBar(); return; }
   if (b.dataset.a) { act(b.dataset.a, b.dataset.v); if (barOn && sel.size) { barSel = selSig(); updateBar(); } }
 });
@@ -2719,7 +3027,7 @@ const ROUTES = [['arc', 'M4 17Q12 2 20 17', 'Arc: drag the middle to bend'], ['b
 const ESHAPES = [['line', 'Line'], ['double', 'Double line'], ['wave', 'Wavy'], ['zig', 'Zigzag']].map(([k, t]) => [k, shapeIc(k), t]);
 const HEAD_NAMES = { none: 'None', vee: 'Arrow', tri: 'Filled triangle', otri: 'Open triangle', two: 'Double head', circ: 'Dot', ocirc: 'Circle', bar: 'Bar', hook: 'Hook', ray: 'Ray: runs on one grid step and fades' };
 const headOpts = back => HEADS.map(t => [t, headIc(t, back), HEAD_NAMES[t]]);
-const KINDS = [['circle', small(IC.circle), 'Circle'], ['rect', small(IC.rect), 'Box'], ['tri', small(IC.tri), 'Triangle'], ['diamond', small(IC.diamond), 'Diamond']];
+const KINDS = [['circle', small(IC.circle), 'Circle'], ['rect', small(IC.rect), 'Box'], ['tri', small(IC.tri), 'Triangle'], ['diamond', small(IC.diamond), 'Diamond'], ['gate', small(IC.gate), 'Logic gate']];
 const DIRS = ['up', 'right', 'down', 'left'].map(d => [d, triIc(d), 'Points ' + d]);
 const diaIc = (w, h) => sv(`<path d="M12 ${12 - h}L${12 + w} 12L12 ${12 + h}L${12 - w} 12Z"/>`, 18);
 const DIAS = [['sq', diaIc(7.5, 7.5), 'Square diamond (equal sides)'], ['wide', diaIc(9, 5.5), 'Wide'], ['tall', diaIc(5.5, 9), 'Tall']];
@@ -2739,6 +3047,7 @@ BUILD.stroke = () => {
 BUILD.shape = () => {
   const ns = selNodes().filter(shp), k = common(ns, n => n.k);
   let h = `<div class="row">${seg('kind', k, [...KINDS, ['text', small(IC.text), 'Text only']])}`;
+  if (ns.some(n => n.k === 'gate')) h += vs + seg('gtype', common(ns.filter(n => n.k === 'gate'), n => n.g || 'and'), GATE_SEG);
   if (ns.some(n => n.k === 'tri')) h += vs + seg('dir', common(ns, n => n.dir || 'up'), DIRS);
   if (ns.some(n => n.k !== 'circle')) {
     const r = common(ns, n => n.rad || 0) ?? 6;
@@ -2814,7 +3123,8 @@ function act(a, v, live) {
     case 'sw': if (!(+v > 0)) break; revive(); setN('sw', Math.min(+v, 12), n => n.k !== 'text' && n.k !== 'dot'); break;
     case 'sd': revive(); setN('sd', v, n => n.k !== 'text' && n.k !== 'dot'); break;
     case 'dbl': if (v) revive(); setN('dbl', !!v, shp); break;
-    case 'kind': forNodes(n => { n.k = v; if (v === 'tri' && !n.dir) n.dir = 'up'; if (v !== 'text') { const d = KDEF[v]; if (n.w === KDEF.text.w) { n.w = d.w; n.h = d.h; } if (n.fill === 'none' && n.stroke === 'none') { n.fill = d.fill; n.stroke = d.stroke; } } }, notImg); break;
+    case 'gtype': forNodes(n => { n.g = v; remember(n, 'g', v); }, n => n.k === 'gate'); break;
+    case 'kind': forNodes(n => { n.k = v; if (v === 'tri' && !n.dir) n.dir = 'up'; if (v === 'gate' && !n.g) n.g = 'and'; if (v !== 'text') { const d = KDEF[v]; if (n.w === KDEF.text.w) { n.w = d.w; n.h = d.h; } if (n.fill === 'none' && n.stroke === 'none') { n.fill = d.fill; n.stroke = d.stroke; } } }, notImg); break;
     case 'round': setN('rad', v ? radPre() : 0, n => shp(n) && n.k !== 'circle'); break;
     case 'rad': { const r1 = Math.round(+v); if (!(r1 >= 1)) break; setN('rad', Math.min(r1, 99), n => shp(n) && n.k !== 'circle'); break; }
     case 'radd': { const r0 = common(selNodes().filter(n => shp(n) && n.k !== 'circle'), n => n.rad || 0) ?? 6; setN('rad', clamp(r0 + +v, 1, 99), n => shp(n) && n.k !== 'circle'); const f = pp.querySelector('.nnum[data-a=rad]'); if (f) f.value = clamp(r0 + +v, 1, 99); break; }
@@ -3324,7 +3634,7 @@ const LZ_IC = {
 const defOf = k => ({ ...KDEF[k], ...(prefs.defs[k] || {}), ts: { ...TS, ...(prefs.defs[k]?.ts || {}) } });
 const dot = (a, c, cur, t) => `<button class="sdot ${c === cur ? 'on' : ''} ${c === 'none' ? 'none' : ''}" data-a="${a}" data-v="${c}" title="${t || c}" style="--c:${c === 'none' ? '#fff' : c}"></button>`;
 /* a tool's sub-bar is made of parts; a layout may hide them or change their order (layout.subs[tool] = visible ids in order) */
-const SUB_NAMES = { selm: 'Box / lasso', fill: 'Fill', border: 'Border', dir: 'Direction', dia: 'Proportions', round: 'Corners', col: 'Colour', size: 'Size', style: 'Bold, italic, underline', lstyle: 'Line style', arrow: 'Arrow heads', mode: 'Mode' };
+const SUB_NAMES = { gate: 'Gate', selm: 'Box / lasso', fill: 'Fill', border: 'Border', dir: 'Direction', dia: 'Proportions', round: 'Corners', col: 'Colour', size: 'Size', style: 'Bold, italic, underline', lstyle: 'Line style', arrow: 'Arrow heads', mode: 'Mode' };
 function subParts(t) {
   if (t === 'select') return [['selm', seg('s:selm', prefs.selMode, [['box', small(IC.selBox), 'Box select (V)'], ['lasso', small(IC.lasso), 'Lasso (V again)']])]];
   if (SHAPES.includes(t)) {
@@ -3335,6 +3645,7 @@ function subParts(t) {
     P.push(['border', `<button class="wd bchip ${ownS ? 'on mark' : ''}" data-a="s:bpal" title="Border: none, colour, width, dashes">${chip(d.stroke || '#1d1d1f', true)}</button>` + stySeg('s:bsty', 'bSty', d)]);
     if (t === 'tri') P.push(['dir', seg('s:dir', d.dir || 'up', DIRS)]);
     if (t === 'diamond') P.push(['dia', seg('s:dia', diaOf(d), DIAS)]);
+    if (t === 'gate') P.unshift(['gate', seg('s:gate', d.g || 'and', GATE_SEG)]);
     if (t === 'rect' || t === 'diamond') P.push(['round', ib('s:round', RND_IC, `Rounded corners (${radPre()}px · right-click to set)`, (d.rad || 0) > 0)]);
     return P;
   }
@@ -3415,6 +3726,7 @@ function subAct(a, v) {
     }
     case 'dbl': { const on = !defOf(tool).dbl || defOf(tool).stroke === 'none'; SHAPES.forEach(s2 => { D(s2).dbl = on; if (on && defOf(s2).stroke === 'none') D(s2).stroke = '#1d1d1f'; }); break; }
     case 'dir': D('tri').dir = v; break;
+    case 'gate': D('gate').g = v; syncDock(); break;
     case 'dia': { const [w, h] = DIA_SZ[v] || DIA_SZ.sq; D('diamond').w = w; D('diamond').h = h; break; }
     case 'round': { const on = !(defOf(tool).rad > 0); ['rect', 'diamond'].forEach(s2 => (D(s2).rad = on ? radPre() : 0)); break; }
     case 'bsty': { const p = presetOf('bSty')[+v]; if (!p) return; SHAPES.forEach(s2 => { const d = D(s2); d.sw = p.sw ?? 1.5; d.sd = p.sd || 'solid'; if (p.col) d.stroke = p.col; else if (defOf(s2).stroke === 'none') d.stroke = '#1d1d1f'; }); break; }
@@ -3571,6 +3883,7 @@ function drawMinimap() {
   for (const e of doc.edges) { const gm = egeo.get(e.id); if (!gm) continue; g.moveTo(X(gm.P.x), Y(gm.P.y)); g.lineTo(X(gm.mid.x), Y(gm.mid.y)); g.lineTo(X(gm.Q.x), Y(gm.Q.y)); }
   g.stroke();
   for (const n of doc.nodes) {
+    if (n.hid || n.k === 'mark') continue;
     const { w, h } = size(n);
     g.beginPath();
     if (n.k === 'circle' || n.k === 'dot') g.ellipse(X(n.x), Y(n.y), Math.max(1, w / 2 * sc), Math.max(1, h / 2 * sc), (n.rot || 0) * D2R, 0, Math.PI * 2);
@@ -3613,53 +3926,493 @@ const GEO_IC = {
   ctr: sv('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/>', 16),
   free: sv('<circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>', 16),
 };
-/* what the selection can build: [action id, label, run]; the same list feeds the right-click menu and the keys */
-function geoOptions() {
-  const ns = selNodes().filter(n => n.k !== 'image'), es = selEdges().filter(e => !(e.a && e.a === e.b)), out = [];
-  const circ = n => n.k === 'circle';
-  if ((es.length === 1 && !ns.length) || (ns.length === 2 && !es.length)) {
-    const base = es.length ? { e: es[0].id } : { a: ns[0].id, b: ns[1].id };
-    out.push(['mid', 'Midpoint', () => geoMake(() => [mkPt({ op: 'mid', ...base })])]);
-    out.push(['pbis', 'Perpendicular bisector', () => geoMake(() => { const a = mkPt({ op: 'pb', ...base, s: 1 }, 5), b = mkPt({ op: 'pb', ...base, s: -1 }, 5); return [a, b, geoEdge(a, b)]; })]);
+Object.assign(GEO_IC, {
+  tcg: sv('<path d="M12 4L3 19h18z"/><path d="M12 4l1.5 15M3 19l13.5-7.5M21 19L7.5 11.5" stroke-width="1" stroke-dasharray="1.6 1.6"/><circle cx="12" cy="14" r="1.8" fill="currentColor" stroke="none"/>', 16),
+  tch: sv('<path d="M12 4L3 19h18z"/><path d="M12 4v15" stroke-width="1" stroke-dasharray="1.6 1.6"/><path d="M12 16.5h2.5V19" stroke-width="1"/><circle cx="12" cy="13" r="1.8" fill="currentColor" stroke="none"/>', 16),
+  tco: sv('<circle cx="12" cy="13" r="8.5" stroke-width="1" stroke-dasharray="1.6 1.6"/><path d="M12 4.5L4.6 17.3h14.8z"/><circle cx="12" cy="13" r="1.8" fill="currentColor" stroke="none"/>', 16),
+  tci: sv('<path d="M12 4L3 19h18z"/><circle cx="12" cy="14.3" r="4.4" stroke-width="1" stroke-dasharray="1.6 1.6"/><circle cx="12" cy="14.3" r="1.6" fill="currentColor" stroke="none"/>', 16),
+  compass: sv('<circle cx="12" cy="4.6" r="1.6"/><path d="M11.1 6L6 20M12.9 6L18 20M7.6 15.6h8.8"/>', 16),
+  seg: sv('<path d="M5 17L19 7"/><circle cx="5" cy="17" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="7" r="1.7" fill="currentColor" stroke="none"/>', 16),
+  ray: sv('<path d="M5 17L21.5 5.2"/><circle cx="5" cy="17" r="1.7" fill="currentColor" stroke="none"/><circle cx="13" cy="11.3" r="1.5" fill="currentColor" stroke="none"/>', 16),
+  line: sv('<path d="M2 19.2L22 4.8"/><circle cx="8" cy="14.9" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="9.1" r="1.5" fill="currentColor" stroke="none"/>', 16),
+  circ2: sv('<circle cx="12" cy="12" r="8"/><path d="M12 12l5.6-5.6" stroke-width="1.1"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="17.6" cy="6.4" r="1.6" fill="currentColor" stroke="none"/>', 16),
+  c3: sv('<circle cx="12" cy="12" r="8"/><circle cx="4.3" cy="14.2" r="1.6" fill="currentColor" stroke="none"/><circle cx="15.5" cy="4.8" r="1.6" fill="currentColor" stroke="none"/><circle cx="17.2" cy="18" r="1.6" fill="currentColor" stroke="none"/>', 16),
+  arc: sv('<path d="M19.5 12A7.5 7.5 0 0 0 6.7 6.7"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><path d="M12 12h7.5M12 12L6.7 6.7" stroke-width="1" stroke-dasharray="1.5 1.8"/>', 16),
+  arc3: sv('<path d="M4 17C6 7 18 7 20 17"/><circle cx="4" cy="17" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="9.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="20" cy="17" r="1.6" fill="currentColor" stroke="none"/>', 16),
+  abis: sv('<path d="M4 19h16M4 19L16 5"/><path d="M4 19l17-8" stroke-dasharray="2 2"/><path d="M10 19a6 6 0 0 0-2-4.4" stroke-width="1.1"/>', 16),
+  foot: sv('<path d="M3 18h18M12 18V5" /><path d="M12 14.5h3.5V18" stroke-width="1.1"/><circle cx="12" cy="18" r="1.8" fill="currentColor" stroke="none"/>', 16),
+  tan: sv('<circle cx="14.5" cy="13.5" r="5.5"/><path d="M2.5 7.6L21 6.2M2.5 7.6l11.2 12.3"/><circle cx="2.8" cy="7.6" r="1.5" fill="currentColor" stroke="none"/>', 16),
+  poly: sv('<path d="M5 18L8 6l11 3-2 9z" fill="currentColor" fill-opacity=".2"/>', 16),
+  pton: sv('<path d="M3 17L21 7"/><circle cx="12" cy="12" r="2.4"/>', 16),
+  rot: sv('<path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M17.4 3.6v3.8h-3.8"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>', 16),
+  dil: sv('<rect x="4" y="12.5" width="6" height="6" rx="1"/><rect x="8.5" y="4.5" width="11" height="11" rx="1" stroke-dasharray="2 2"/>', 16),
+  tr: sv('<path d="M3 16.5l4-8 4 8z"/><path d="M13 16.5l4-8 4 8z" stroke-dasharray="2 2"/><path d="M7 20.5h10m-2-2 2 2-2 2" stroke-width="1.1"/>', 16),
+  refl: sv('<path d="M12 3v18" stroke-dasharray="2 2"/><path d="M9 7L4 17h5z"/><path d="M15 7l5 10h-5z" stroke-dasharray="2 1.6"/>', 16),
+  mctr: sv('<circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="7" stroke-dasharray="2.6 2.4"/>', 16),
+  mmir: sv('<path d="M12 3v18" stroke-width="2.2"/><path d="M5 8l4 4-4 4M19 8l-4 4 4 4" stroke-width="1.1"/>', 16),
+  mvec: sv('<path d="M5 19L18 6"/><path d="M11.5 6H18v6.5"/><circle cx="5" cy="19" r="1.6" fill="currentColor" stroke="none"/>', 16),
+  mdist: sv('<rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M7 8v3M11 8v4M15 8v3M19 8v2"/>', 16),
+  mslope: sv('<path d="M4 19L20 5"/><path d="M8 15.5h4.6V11.5" stroke-width="1.1"/>', 16),
+  mang: sv('<path d="M20 18H4l11-12"/><path d="M10 18a6 6 0 0 0-1.6-4.1"/>', 16),
+  marea: sv('<path d="M5 18L8 6l11 3-2 9z" fill="currentColor" fill-opacity=".35"/>', 16),
+  mper: sv('<path d="M5 18L8 6l11 3-2 9z" stroke-dasharray="2.4 1.8"/>', 16),
+  mrad: sv('<circle cx="12" cy="12" r="8"/><path d="M12 12h8"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>', 16),
+  mcoord: sv('<path d="M4 20V4M4 20h16"/><path d="M4 11h9v9" stroke-dasharray="2 2" stroke-width="1.1"/><circle cx="13" cy="11" r="1.7" fill="currentColor" stroke="none"/>', 16),
+  angm: sv('<path d="M20 18H4l11-12"/><path d="M11 18a7 7 0 0 0-1.9-4.8M14.5 18a10.5 10.5 0 0 0-2.8-7.2"/>', 16),
+  rang: sv('<path d="M5 4v15h15"/><path d="M5 13h6v6" stroke-width="1.1"/>', 16),
+  name: sv('<circle cx="6.5" cy="17" r="1.8" fill="currentColor" stroke="none"/><path d="M11.5 13l3.2-8.5 3.3 8.5M12.6 10.2h4.2"/>', 16),
+  unmark: sv('<circle cx="12" cy="12" r="7" stroke-dasharray="2.6 2.4"/><path d="M9 9l6 6M15 9l-6 6"/>', 16),
+});
+const tickIc = k => sv(`<path d="M3 12h18"/>${[...Array(+k)].map((_, i) => `<path d="M${12 + (i - (k - 1) / 2) * 3.6} 8v8"/>`).join('')}`, 15);
+const markIc = m => m === 'sq' ? sv('<path d="M5 4v15h15"/><path d="M5 12h7v7" stroke-width="1.2"/>', 15) : sv(`<path d="M5 4v15h15"/>${[...Array(+m)].map((_, i) => { const r = 7 + i * 3; return `<path d="M5 ${19 - r}A${r} ${r} 0 0 1 ${5 + r} 19" stroke-width="1.2"/>`; }).join('')}`, 15);
+
+/* ---------- what is selected, in the order it was picked (a Set keeps insertion order) ---------- */
+function geoSel() {
+  const order = [...sel], N = [], E = [];
+  for (const id of order) { const n = idx.get(id); if (n) { if (!n.hid) N.push(n); } else { const e = edgeById(id); if (e) E.push(e); } }
+  const pts = N.filter(n => n.k !== 'poly' && n.k !== 'mark' && n.k !== 'image' && n.k !== 'text');
+  const lines = E.filter(e => gLine(e)), circs = N.filter(n => n.k === 'circle' && Math.abs(n.w - n.h) < 1);
+  /* points and only the segments between them (a box round a triangle): the lines do not get in the way */
+  const ids = new Set(pts.map(n => n.id)), fig = pts.length >= 2 && pts.length === N.length && E.length > 0 && E.every(e => e.a && e.b && ids.has(e.a) && ids.has(e.b));
+  /* lines with their end points selected too: the points are only their ends */
+  const ends = new Set(E.flatMap(e => [e.a, e.b]).filter(Boolean)), endsOnly = N.length > 0 && E.length > 0 && N.every(n => n.k === 'dot' && ends.has(n.id));
+  /* what the selection counts as: exactly np shapes and ne lines; a box selection that also caught the sides
+     between its points (or the end points of its lines) still counts as the points (or the lines) alone */
+  const only = (np, ne) => (N.length === np && E.length === ne) || (ne === 0 && fig && pts.length === np) || (np === 0 && endsOnly && E.length === ne && lines.length === ne);
+  let ang = null;
+  if (pts.length === 3 && N.length === 3 && !E.length) ang = pts;
+  else if (E.length === 2 && lines.length === 2) {
+    const [e1, e2] = lines, sh = [e1.a, e1.b].find(x => x && (x === e2.a || x === e2.b));
+    const a = sh && (e1.a === sh ? e1.b : e1.a), c = sh && (e2.a === sh ? e2.b : e2.a);
+    const A = a && idx.get(a), B = sh && idx.get(sh), C = c && idx.get(c);
+    if (A && B && C && N.every(n => n === A || n === B || n === C)) ang = [A, B, C];
   }
-  if (ns.length === 1 && es.length === 1) {
-    const q = ns[0].id, e = es[0].id;
-    out.push(['perp', 'Perpendicular to the line', () => geoMake(() => { const f = mkPt({ op: 'foot', p: q, e }); return [f, geoEdge(ns[0], f)]; })]);
-    out.push(['par', 'Parallel through the point', () => geoMake(() => { const r = mkPt({ op: 'par', p: q, e }); return [r, geoEdge(ns[0], r)]; })]);
-    out.push(['refl', 'Reflect in the line', () => geoMake(() => [mkPt({ op: 'refl', p: q, e })])]);
-    if (circ(ns[0])) out.push(['inter', 'Where line and circle meet', () => geoMake(() => [mkPt({ op: 'xlc', e, c: q, s: 1 }), mkPt({ op: 'xlc', e, c: q, s: -1 })])]);
-  }
-  if (es.length === 2 && !ns.length) out.push(['inter', 'Intersection', () => geoMake(() => [mkPt({ op: 'x', e: es[0].id, e2: es[1].id })])]);
-  if (ns.length === 2 && !es.length && ns.every(circ)) out.push(['inter', 'Where the circles meet', () => geoMake(() => [mkPt({ op: 'xcc', c1: ns[0].id, c2: ns[1].id, s: 1 }), mkPt({ op: 'xcc', c1: ns[0].id, c2: ns[1].id, s: -1 })])]);
-  if (ns.length === 1 && !es.length && ns[0].k !== 'dot') out.push(['ctr', 'Centre point', () => geoMake(() => [mkPt({ op: 'ctr', n: ns[0].id })])]);
-  return out;
+  return { N, E, pts, lines, circs, dots: N.filter(n => n.k === 'dot'), only, fig, ang };
 }
-function mkPt(dep, size) {
-  const n = newNode('dot', 0, 0); if (size) n.w = n.h = size;
-  n.dep = dep; doc.nodes.push(n); idx.set(n.id, n);
-  const r = depPos(dep); if (r) { n.x = r.x; n.y = r.y; } else n.dead = true;
+/* a line drawn between points (or loose ends), not a connector between shapes */
+const geoLine = e => !!gLine(e) && ['a', 'b'].every(w => { const n = e[w] && idx.get(e[w]); return !e[w] || (n && n.k === 'dot'); });
+
+/* ---------- building blocks ---------- */
+function mkPt(dep, o = {}) {
+  const n = newNode('dot', 0, 0); if (o.size) n.w = n.h = o.size;
+  n.dep = dep; if (o.hid) n.hid = true;
+  doc.nodes.push(n); idx.set(n.id, n);
+  const r = depPos(dep, n); if (r && r.x != null) { n.x = r.x; n.y = r.y; } else n.dead = true;
+  if (!o.hid) autoName(n);
   return n;
 }
-function geoEdge(a, b) {
-  const e = newEdge(a, b); e.head = 'none'; e.tail = 'none'; e.bend = 0;
-  for (const k of ['route', 'c1', 'c2', 'em', 'ek']) delete e[k];
-  return e;
+const helper = dep => mkPt(dep, { hid: 1, size: 2 });
+function mkCirc(dep) {
+  const n = newNode('circle', 0, 0); n.fill = 'none'; n.text = ''; n.dep = dep;
+  doc.nodes.push(n); idx.set(n.id, n);
+  const r = depPos(dep, n); if (r) { n.x = r.x; n.y = r.y; n.w = n.h = r.d; } else n.dead = true;
+  return n;
 }
+function mkPoly(pts) {
+  const n = newNode('poly', 0, 0); n.dep = { op: 'poly', pts: pts.map(p => p.id) };
+  doc.nodes.unshift(n); idx.set(n.id, n);
+  const r = depPos(n.dep, n); if (r) Object.assign(n, r); else n.dead = true;
+  return n;
+}
+function mkMark(a, b, c, mc) {
+  const n = newNode('mark', b.x, b.y); n.dep = { op: 'angm', a: a.id, b: b.id, c: c.id }; n.mc = mc; n.mr = mc === 'sq' ? 12 : 16;
+  doc.nodes.push(n); idx.set(n.id, n);
+  const r = depPos(n.dep, n); if (r) Object.assign(n, r); else n.dead = true;
+  return n;
+}
+/* kind: 'seg' a segment, 'ray' on through b, 'line' on through both ends */
+function geoEdge(a, b, kind = 'seg') {
+  const e = { id: 'e' + uid(), a: a.id, b: b.id, ...edgeBase(), head: kind === 'seg' ? 'none' : 'ray', tail: kind === 'line' ? 'ray' : 'none', bend: 0, shape: 'line', dash: 'solid' };
+  delete e.route; doc.edges.push(e); return e;
+}
+/* an arc from a to b: round the centre cen (counter-clockwise, as Sketchpad), or through the point thru */
+function geoArc(a, b, o) { const e = geoEdge(a, b); e.route = 'carc'; Object.assign(e, o); return e; }
 function geoMake(fn) {
   if (isLocked()) { lockedStop(); return; }
   let made = [];
-  mutate(() => { made = fn(); sel.clear(); made.forEach(m => sel.add(m.id)); });
-  if (made.some(m => m.dead)) toast('They do not meet here: the point shows faint until they do');
+  mutate(() => { made = fn() || []; sel.clear(); made.forEach(m => { if (!m.hid) sel.add(m.id); }); });
+  if (made.some(m => m.dead)) toast('They do not meet here: it shows faint until they do');
 }
-const GEO_HELP = { mid: 'a line, or two points', pbis: 'a line, or two points', perp: 'a point and a line', par: 'a point and a line', refl: 'a point and a line', inter: 'two lines, two circles, or a line and a circle', ctr: 'one shape' };
+/* hidden helpers nothing uses any more go with the line they carried */
+function dropOrphans() {
+  for (let more = true; more;) {
+    more = false;
+    const used = new Set();
+    for (const e of doc.edges) for (const k of ['a', 'b', 'cen', 'thru']) if (e[k]) used.add(e[k]);
+    for (const n of doc.nodes) if (n.dep) depRefs(n.dep).forEach(r => used.add(r));
+    const before = doc.nodes.length;
+    doc.nodes = doc.nodes.filter(n => !n.hid || used.has(n.id));
+    if (doc.nodes.length < before) more = true;
+  }
+}
+
+/* ---------- points: names, sliding, the Dot tool on objects ---------- */
+const setName = (n, nm) => { n.ol = { ...(n.ol || {}), t: `$${nm}$` }; n.oa = { ...(n.oa || {}), t: -45 }; };
+function autoName(n, force) {
+  if ((!force && !prefs.autoName) || n.hid || (n.ol && OL_SIDES.some(s => n.ol[s]))) return;
+  const used = new Set(doc.nodes.filter(m => m !== n).map(m => ptName(m.id)).filter(Boolean));
+  for (let i = 0; ; i++) { const L = String.fromCharCode(65 + i % 26), k = Math.floor(i / 26), nm = k ? `${L}_${k}` : L; if (!used.has(nm)) { setName(n, nm); return; } }
+}
+/* a point on a line / circle follows the pointer along it (segments keep it between their ends) */
+function slideOn(n) {
+  const d = n.dep;
+  if (d.e) {
+    const e = edgeById(d.e), l = gLine(e); if (!l) return;
+    let t = footOf(n, ...l).t; if (e.tail !== 'ray') t = Math.max(t, 0); if (e.head !== 'ray') t = Math.min(t, 1); d.t = t;
+  } else { const c = gCirc(idx.get(d.c)); if (!c) return; d.a = Math.atan2(n.y - c.y, n.x - c.x); }
+  const r = depPos(d, n); if (r) { n.x = r.x; n.y = r.y; }
+}
+/* what a move drags: free and sliding points, and both ends of a selected line drawn between free points */
+function dotEnds(e) {
+  if (!e.a && !e.b) return false;
+  return ['a', 'b'].every(w => { const n = e[w] && idx.get(e[w]); return !e[w] || (n && n.k === 'dot' && !n.hid && canMove(n)); });
+}
+function moveSet() {
+  const out = new Set(selNodes().filter(n => !n.hid && canMove(n)));
+  for (const e of selEdges()) if (dotEnds(e)) for (const w of ['a', 'b']) { const n = e[w] && idx.get(e[w]); if (n) out.add(n); }
+  return [...out];
+}
+/* the Dot tool on a line or circle: a point that stays on it; where two meet: their intersection */
+/* loose line ends near p (the nearest first, and every other one on that same spot) */
+function looseAt(p, r = 9 / cam.z) {
+  const all = [];
+  for (const e of doc.edges) for (const w of ['a', 'b']) { const q = !e[w] && e['p' + w]; if (q) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d <= r) all.push({ e, w, q, d }); } }
+  if (!all.length) return all;
+  all.sort((x, y) => x.d - y.d); const q0 = all[0].q;
+  return all.filter(o => Math.hypot(o.q.x - q0.x, o.q.y - q0.y) < 3 / cam.z);
+}
+function dotOnto(p) {
+  const R = 8 / cam.z, objs = [];
+  for (const e of doc.edges) {
+    const l = gLine(e); if (!l) continue;
+    let t = footOf(p, ...l).t; if (e.tail !== 'ray') t = Math.max(t, 0); if (e.head !== 'ray') t = Math.min(t, 1);
+    const q = { x: l[0].x + (l[1].x - l[0].x) * t, y: l[0].y + (l[1].y - l[0].y) * t }, d = Math.hypot(q.x - p.x, q.y - p.y);
+    if (d <= R) objs.push({ e, d, t });
+  }
+  for (const n of doc.nodes) {
+    if (n.hid || n.k !== 'circle' || Math.abs(n.w - n.h) > 1) continue;
+    const c = gCirc(n); if (!c) continue;
+    const d = Math.abs(Math.hypot(p.x - c.x, p.y - c.y) - c.r); if (d <= R) objs.push({ n, d });
+  }
+  if (!objs.length) return null;
+  let best = null;
+  for (let i = 0; i < objs.length; i++) for (let j = i + 1; j < objs.length; j++) {
+    const A = objs[i], B = objs[j], cands = [];
+    if (A.e && B.e) cands.push({ op: 'x', e: A.e.id, e2: B.e.id });
+    else if (A.n && B.n) for (const s of [1, -1]) cands.push({ op: 'xcc', c1: A.n.id, c2: B.n.id, s });
+    else { const L = A.e || B.e, C = A.n || B.n; for (const s of [1, -1]) cands.push({ op: 'xlc', e: L.id, c: C.id, s }); }
+    for (const dep of cands) { const q = depPos(dep); if (!q) continue; const d = Math.hypot(q.x - p.x, q.y - p.y); if (d <= R * 1.6 && (!best || d < best.d)) best = { dep, d }; }
+  }
+  if (best) return best.dep;
+  const o = objs.sort((a, b) => a.d - b.d)[0];
+  if (o.e) return { op: 'on', e: o.e.id, t: o.t };
+  const c = gCirc(o.n); return { op: 'on', c: o.n.id, a: Math.atan2(p.y - c.y, p.x - c.x) };
+}
+function placePoint(dep) { geoMake(() => [mkPt(dep)]); }
+
+/* ---------- arcs and tick marks on lines ---------- */
+/* cubic pieces of a circular arc (≤ 90° each): [c1, c2, end, start] */
+function arcBz(C, r, a0, sw) {
+  const n = Math.max(1, Math.ceil(Math.abs(sw) / (Math.PI / 2) - 1e-9)), da = sw / n, k = 4 / 3 * Math.tan(da / 4), out = [];
+  const p = t => ({ x: C.x + r * Math.cos(t), y: C.y + r * Math.sin(t) });
+  for (let i = 0; i < n; i++) {
+    const a = a0 + da * i, b = a + da, s = p(a), e = p(b);
+    out.push([{ x: s.x - k * r * Math.sin(a), y: s.y + k * r * Math.cos(a) }, { x: e.x + k * r * Math.sin(b), y: e.y - k * r * Math.cos(b) }, e, s]);
+  }
+  return out;
+}
+function arcGeom(e, A0, B0) {
+  if (!e.a || !e.b) return null;
+  let C, r, a0, sw;
+  const TAU = 2 * Math.PI, norm = v => ((v % TAU) + TAU) % TAU;
+  if (e.cen) {
+    const c = idx.get(e.cen); if (!c || c.dead) return null;
+    C = { x: c.x, y: c.y }; r = Math.hypot(A0.x - C.x, A0.y - C.y); if (r < 1) return null;
+    a0 = Math.atan2(A0.y - C.y, A0.x - C.x);
+    sw = -norm(a0 - Math.atan2(B0.y - C.y, B0.x - C.x)); if (sw === 0) sw = -TAU;   // counter-clockwise as seen (y runs down)
+  } else if (e.thru) {
+    const q = depPos({ op: 'c3', a: e.a, b: e.thru, c: e.b }), T = idx.get(e.thru); if (!q || !T) return null;
+    C = { x: q.x, y: q.y }; r = q.d / 2;
+    const ang = p => Math.atan2(p.y - C.y, p.x - C.x);
+    a0 = ang(A0); const s1 = norm(ang(B0) - a0), st = norm(ang(T) - a0);
+    sw = st < s1 ? s1 : s1 - TAU;
+  } else return null;
+  const bz = arcBz(C, r, a0, sw), P = bz[0][3], Q = bz[bz.length - 1][2];
+  const N = Math.max(8, Math.ceil(Math.abs(sw) * r / 6)), pts = [];
+  for (let i = 0; i <= N; i++) { const t = a0 + sw * i / N; pts.push({ x: C.x + r * Math.cos(t), y: C.y + r * Math.sin(t) }); }
+  const sg = Math.sign(sw), a1 = a0 + sw, dS = { x: -Math.sin(a0) * sg, y: Math.cos(a0) * sg }, dE = { x: -Math.sin(a1) * sg, y: Math.cos(a1) * sg };
+  const d = (e.shape || 'line') === 'line' ? `M${f2(P.x)},${f2(P.y)}` + bz.map(s => `C${f2(s[0].x)},${f2(s[0].y)} ${f2(s[1].x)},${f2(s[1].y)} ${f2(s[2].x)},${f2(s[2].y)}`).join('') : styledPath(null, e, polyPre(pts, 0));
+  const am = a0 + sw / 2, mid = { x: C.x + r * Math.cos(am), y: C.y + r * Math.sin(am) };
+  return { d, P, Q, dS, dE, C: mid, mid, nrm: { x: Math.cos(am), y: Math.sin(am) }, side: 1, pts, bz, A: A0, B: B0, ta: null, tb: null };
+}
+/* equal-length marks: 1–3 short strokes across the middle of a line */
+function tickSegs(e, g) {
+  if (!(g.K || g.pts) || !e.tick) return [];
+  const { p, n } = curveAt(g, .5), u = { x: -n.y, y: n.x }, L = 5 + (e.sw || 1.4), out = [];
+  for (let i = 0; i < e.tick; i++) { const o = (i - (e.tick - 1) / 2) * 3.6, c = { x: p.x + u.x * o, y: p.y + u.y * o }; out.push([{ x: c.x + n.x * L, y: c.y + n.y * L }, { x: c.x - n.x * L, y: c.y - n.y * L }]); }
+  return out;
+}
+function tickMarkup(e, g) {
+  const S2 = tickSegs(e, g); if (!S2.length) return '';
+  return `<path class="ep" d="${S2.map(([a, b]) => `M${f2(a.x)},${f2(a.y)}L${f2(b.x)},${f2(b.y)}`).join('')}" stroke="${e.color}" stroke-width="${e.sw}" fill="none" stroke-linecap="round"/>`;
+}
+function tickTex(e, g, P, plain) {
+  const S2 = tickSegs(e, g); if (!S2.length) return [];
+  return [`\\draw[draw=${rgbOf(e.color)}, line width=${pd(e.sw || 1.4)}] ${S2.map(([a, b]) => `${P(a.x, a.y)} -- ${P(b.x, b.y)}`).join(' ')};`];
+}
+/* a pasted / duplicated arc keeps its centre (or middle point) only when that came along too */
+function remapArc(m, map) {
+  if (m.route !== 'carc') return;
+  for (const k of ['cen', 'thru']) if (m[k]) { if (map[m[k]]) m[k] = map[m[k]]; else { delete m.route; delete m.cen; delete m.thru; return; } }
+}
+
+/* ---------- angle marks and polygon interiors: drawing and LaTeX ---------- */
+const isRight = am => Math.abs(Math.abs(am.sw) - Math.PI / 2) < .5 / R2D;
+function markD(n, w, h) {
+  const am = n.am; if (!am) return 'M0,0';
+  const cx = w / 2, cy = h / 2, r = n.mr || 16, F = (x, y) => `${f2(cx + x)},${f2(cy + y)}`, dir = a => ({ x: Math.cos(a), y: Math.sin(a) });
+  const u = dir(am.a0), v = dir(am.a0 + am.sw);
+  if (n.mc === 'sq' && isRight(am)) { const s = r * .75; return `M${F(u.x * s, u.y * s)}L${F((u.x + v.x) * s, (u.y + v.y) * s)}L${F(v.x * s, v.y * s)}`; }
+  let d = '';
+  for (let i = 0; i < (+n.mc || 1); i++) { const rr = r + i * 3.5; d += `M${F(u.x * rr, u.y * rr)}A${f2(rr)} ${f2(rr)} 0 0 ${am.sw > 0 ? 1 : 0} ${F(v.x * rr, v.y * rr)}`; }
+  return d;
+}
+function geoTex(n, P, plain, col) {
+  const fillOpt = hex => plain ? `fill=${rgbOf(hex)}` : col('fill', hex, '');
+  const drawOpt = hex => plain ? `draw=${rgbOf(hex)}` : col('draw', hex, '');
+  if (n.k === 'poly') {
+    const Q = (n.pp || []).map(([x, y]) => P(n.x + x, n.y + y));
+    return Q.length > 2 ? `\\fill[${fillOpt(n.fill)}, fill opacity=${n.fo ?? .55}] ${Q.join(' -- ')} -- cycle;` : '';
+  }
+  const am = n.am; if (!am || n.stroke === 'none') return '';
+  const o = `[${drawOpt(n.stroke)}, line width=${pd(n.sw)}]`, r = n.mr || 16, C = { x: n.x, y: n.y }, dir = a => ({ x: Math.cos(a), y: Math.sin(a) });
+  if (n.mc === 'sq' && isRight(am)) { const s = r * .75, u = dir(am.a0), v = dir(am.a0 + am.sw); return `\\draw${o} ${P(C.x + u.x * s, C.y + u.y * s)} -- ${P(C.x + (u.x + v.x) * s, C.y + (u.y + v.y) * s)} -- ${P(C.x + v.x * s, C.y + v.y * s)};`; }
+  const parts = [];
+  for (let i = 0; i < (+n.mc || 1); i++) {
+    const bz = arcBz(C, r + i * 3.5, am.a0, am.sw);
+    parts.push(P(bz[0][3].x, bz[0][3].y) + ' ' + bz.map(s => `.. controls ${P(s[0].x, s[0].y)} and ${P(s[1].x, s[1].y)} .. ${P(s[2].x, s[2].y)}`).join(' '));
+  }
+  return `\\draw${o} ${parts.join(' ')};`;
+}
+
+/* ---------- transforms: mark a centre / mirror / vector, then rotate, dilate, reflect, translate ---------- */
+let tfMark = { c: null, e: null, v: null };
+function tfValid() {
+  if (tfMark.c && !idx.get(tfMark.c)) tfMark.c = null;
+  if (tfMark.e && !gLine(edgeById(tfMark.e))) tfMark.e = null;
+  if (tfMark.v && !tfMark.v.every(id => idx.get(id))) tfMark.v = null;
+}
+function tfMarkOverlay() {
+  tfValid(); let s = '';
+  if (tfMark.c) { const q = S(idx.get(tfMark.c)); s += `<circle class="o-tfm" cx="${f2(q.x)}" cy="${f2(q.y)}" r="10"/>`; }
+  if (tfMark.e) { const g = egeo.get(tfMark.e); if (g) { const a = S(g.P), b = S(g.Q); s += `<line class="o-tfm" x1="${f2(a.x)}" y1="${f2(a.y)}" x2="${f2(b.x)}" y2="${f2(b.y)}"/>`; } }
+  if (tfMark.v) {
+    const a = S(idx.get(tfMark.v[0])), b = S(idx.get(tfMark.v[1])), u = unit(b.x - a.x, b.y - a.y), q = { x: -u.y, y: u.x }, L = 9;
+    s += `<path class="o-tfm vec" d="M${f2(a.x)},${f2(a.y)}L${f2(b.x)},${f2(b.y)}M${f2(b.x - u.x * L + q.x * L * .5)},${f2(b.y - u.y * L + q.y * L * .5)}L${f2(b.x)},${f2(b.y)}L${f2(b.x - u.x * L - q.x * L * .5)},${f2(b.y - u.y * L - q.y * L * .5)}"/>`;
+  }
+  return s;
+}
+function applyTf(t) {
+  geoMake(() => {
+    const { N, E } = geoSel(), fixed = id => (t.k === 'rot' || t.k === 'dil') && id === t.c;
+    const nodes = N.filter(n => n.dep?.op !== 'meas'), ids = new Set(nodes.map(n => n.id));
+    const edges = new Set(E.filter(e => e.id !== t.e));
+    for (const e of doc.edges) if (e.a && e.b && e.a !== e.b && ids.has(e.a) && ids.has(e.b) && e.id !== t.e) edges.add(e);
+    const want = new Map(), add = n => { if (n && !want.has(n.id)) want.set(n.id, n); };
+    nodes.forEach(add);
+    for (const n of nodes) if (n.dep && (n.k === 'poly' || n.k === 'mark')) depRefs(n.dep).forEach(id => add(idx.get(id)));
+    for (const e of edges) for (const k of ['a', 'b', 'cen', 'thru']) if (e[k]) add(idx.get(e[k]));
+    const map = {}, made = [];
+    const put = (m, src) => { doc.nodes.push(m); idx.set(m.id, m); made.push(m); const r = depPos(m.dep, m); if (r) { delete r.text; Object.assign(m, r); } else m.dead = true; if (src) map[src] = m.id; };
+    for (const n of want.values()) {
+      if (n.k === 'poly' || n.k === 'mark') continue;
+      if (fixed(n.id)) { map[n.id] = n.id; continue; }
+      const m = { ...clone(n), id: 'n' + uid(), dep: { op: 'tf', src: n.id, t: clone(t) } };
+      delete m.dead; delete m.ol; delete m.oa;
+      const nm = ptName(n.id); if (nm && !n.hid) setName(m, nm + "'");
+      put(m, n.id);
+    }
+    for (const n of want.values()) {
+      if ((n.k !== 'poly' && n.k !== 'mark') || !n.dep) continue;
+      const d = clone(n.dep); let ok = true;
+      depWalk(d, (v, set) => { if (map[v]) set(map[v]); else ok = false; });
+      if (ok) put({ ...clone(n), id: 'n' + uid(), dep: d });
+    }
+    const flip = t.k === 'refl';
+    for (const e of edges) {
+      const a = e.a ? map[e.a] : null, b = e.b ? map[e.b] : null;
+      if ((e.a && !a) || (e.b && !b)) continue;
+      const m = { ...clone(e), id: 'e' + uid(), a, b }; delete m.qa; delete m.qb;
+      for (const k of ['pa', 'pb']) if (m[k]) m[k] = tfPt(t, m[k]) || m[k];
+      remapArc(m, map);
+      if (flip && m.bend) m.bend = -m.bend;
+      if (flip && m.route === 'carc' && m.cen) { [m.a, m.b] = [m.b, m.a]; [m.head, m.tail] = [m.tail, m.head]; }
+      doc.edges.push(m); made.push(m);
+    }
+    return made;
+  });
+}
+/* a small card for a number: field, unit, a few one-click values */
+const ncard = document.createElement('div'); ncard.id = 'ncard'; ncard.hidden = true; document.body.appendChild(ncard);
+function closeNum() { ncard.hidden = true; ncard.onclick = null; }
+function askNum(at, ic, def, unit, chips, cb) {
+  ncard.innerHTML = `<span class="nc-ic">${ic}</span><input class="nc-in" inputmode="decimal" value="${def}"><span class="nc-u">${unit}</span><span class="nc-sep"></span>${chips.map(([v, t]) => `<button class="nc-c" data-v="${v}">${t}</button>`).join('')}<button class="nc-ok" title="Apply (Enter)">${sv('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 15)}</button>`;
+  ncard.hidden = false; ncard.classList.remove('in'); void ncard.offsetWidth; ncard.classList.add('in');
+  const w = ncard.offsetWidth, h = ncard.offsetHeight;
+  ncard.style.left = clamp(at.x - w / 2, 8, innerWidth - w - 8) + 'px'; ncard.style.top = clamp(at.y, 8, innerHeight - h - 8) + 'px';
+  const inp = ncard.querySelector('input'), go = v => { const x = String(v).trim().replace('−', '-'), f = /^(-?[\d.]+)\s*\/\s*([\d.]+)$/.exec(x), n = f ? +f[1] / +f[2] : parseFloat(x); if (!isFinite(n) || n === 0 && unit !== '°') { inp.classList.add('bad'); return; } closeNum(); cb(n); };
+  inp.focus(); inp.select();
+  inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') go(inp.value); else if (e.key === 'Escape') closeNum(); else inp.classList.remove('bad'); };
+  ncard.onclick = e => { const b = e.target.closest('button'); if (!b) return; go(b.classList.contains('nc-ok') ? inp.value : b.dataset.v); };
+}
+addEventListener('pointerdown', e => { if (!ncard.hidden && !ncard.contains(e.target)) closeNum(); }, true);
+const selAt = () => { const ns = selNodes(); if (!ns.length) return { x: innerWidth / 2, y: innerHeight / 2 }; const b = bboxOf(ns.map(n => S(n))); return { x: b.cx, y: b.b + 26 }; };
+function runTf(kind) {
+  tfValid();
+  if (kind === 'refl') {
+    const { N, lines, E } = geoSel(); let m = tfMark.e;
+    if (!m && lines.length === 1 && E.length === 1 && N.length) m = lines[0].id;
+    if (!m) { toast('Mark a mirror first: select a line → Mark as mirror'); return; }
+    applyTf({ k: 'refl', e: m }); return;
+  }
+  if (kind === 'tr') { if (!tfMark.v) { toast('Mark a vector first: select two points → Mark vector'); return; } applyTf({ k: 'tr', a: tfMark.v[0], b: tfMark.v[1] }); return; }
+  if (!tfMark.c) { toast('Mark a centre first: select a point → Mark as centre'); return; }
+  const rot = kind === 'rot';
+  askNum(selAt(), GEO_IC[kind], rot ? (prefs.tfDeg ?? 90) : (prefs.tfF ?? 2), rot ? '°' : '×',
+    rot ? [[30, '30°'], [45, '45°'], [60, '60°'], [90, '90°'], [180, '180°'], [-90, '−90°']] : [[.5, '½'], [2, '2'], [3, '3'], [-1, '−1']],
+    v => { if (rot) prefs.tfDeg = v; else prefs.tfF = v; savePrefs(); applyTf(rot ? { k: 'rot', c: tfMark.c, deg: v } : { k: 'dil', c: tfMark.c, f: v }); });
+}
+function setMark(k, v) { tfMark[k] = v; drawOverlay(); }
+
+/* ---------- live measurements: a text that keeps its value up to date ---------- */
+function mkMeas(dep, involved) {
+  const b = bboxOf(involved.map(n => ({ x: n.x, y: n.y }))), at = { x: b.cx, y: b.b + 26 };
+  for (let i = 0; i < 30 && doc.nodes.some(m => m.dep?.op === 'meas' && Math.abs(m.x - at.x) < 60 && Math.abs(m.y - at.y) < 12); i++) at.y += 22;
+  const n = newNode('text', at.x, at.y); n.dep = dep;
+  doc.nodes.push(n); idx.set(n.id, n);
+  const r = depPos(dep, n); if (r) n.text = r.text; else n.dead = true;
+  return n;
+}
+
+/* ---------- the menus: [id, label, run] per group ---------- */
+function geoOpts() {
+  const { N, E, pts, lines, circs, dots, only, fig, ang } = geoSel(), out = [], P = (id, t, f) => out.push([id, t, () => geoMake(f)]);
+  /* a triangle (three points, with or without its sides): its centres */
+  if (pts.length === 3 && N.length === 3 && (!E.length || fig)) {
+    const [a, b, c] = pts.map(n => n.id);
+    P('tcg', 'Centroid', () => [mkPt({ op: 'tc', k: 'g', a, b, c })]);
+    P('tch', 'Orthocentre', () => [mkPt({ op: 'tc', k: 'h', a, b, c })]);
+    P('tco', 'Circumcentre', () => [mkPt({ op: 'tc', k: 'o', a, b, c })]);
+    P('tci', 'Incentre', () => [mkPt({ op: 'tc', k: 'i', a, b, c })]);
+    if (fig) P('c3', 'Circumcircle', () => [mkCirc({ op: 'c3', a, b, c })]);
+  }
+  /* several segments (a figure, or lines alone): the midpoint of each */
+  const segs = E.filter(e => gLine(e));
+  if (segs.length >= 2 && segs.length === E.length && (!N.length || fig)) P('mid', 'Midpoints of the sides', () => segs.map(e => mkPt({ op: 'mid', e: e.id })));
+  const L1 = lines.length === 1 && only(0, 1), twoP = pts.length === 2 && only(2, 0);
+  if (L1 || twoP) {
+    const base = L1 ? { e: E[0].id } : { a: pts[0].id, b: pts[1].id };
+    P('mid', 'Midpoint', () => [mkPt({ op: 'mid', ...base })]);
+    P('pbis', 'Perpendicular bisector', () => { const a = helper({ op: 'pb', ...base, s: 1 }), b = helper({ op: 'pb', ...base, s: -1 }); return [a, b, geoEdge(a, b, 'line')]; });
+  }
+  if (L1) P('pton', 'Point on the line', () => [mkPt({ op: 'on', e: E[0].id, t: .3 })]);
+  if (circs.length === 1 && only(1, 0)) P('pton', 'Point on the circle', () => [mkPt({ op: 'on', c: circs[0].id, a: -Math.PI / 4 })]);
+  if (twoP) {
+    const [a, b] = pts;
+    if (!fig) P('seg', 'Segment', () => [geoEdge(a, b)]);
+    P('ray', 'Ray', () => [geoEdge(a, b, 'ray')]);
+    P('line', 'Line', () => [geoEdge(a, b, 'line')]);
+    P('circ2', 'Circle by centre and point', () => [mkCirc({ op: 'circ', c: { n: a.id }, r: { n: b.id } })]);
+  }
+  if (pts.length >= 3 && !fig && only(pts.length, 0)) P('seg', 'Segments', () => pts.map((p, i) => geoEdge(p, pts[(i + 1) % pts.length])));
+  if (ang) { const [a, b, c] = ang; P('abis', 'Angle bisector', () => { const h = helper({ op: 'abis', a: a.id, b: b.id, c: c.id }); return [h, geoEdge(b, h, 'ray')]; }); }
+  if (pts.length === 3 && only(3, 0)) {
+    const [a, b, c] = pts;
+    P('c3', 'Circle through 3 points', () => [mkCirc({ op: 'c3', a: a.id, b: b.id, c: c.id })]);
+    P('arc', 'Arc on circle (centre first)', () => [geoArc(b, c, { cen: a.id })]);
+    P('arc3', 'Arc through 3 points', () => [geoArc(a, c, { thru: b.id })]);
+  }
+  if (pts.length >= 3 && only(pts.length, 0)) P('poly', 'Polygon interior', () => [mkPoly(pts)]);
+  if (pts.length === 1 && lines.length === 1 && only(1, 1)) {
+    const q = pts[0], e = E[0].id;
+    P('perp', 'Perpendicular line', () => { const h = helper({ op: 'dir', p: q.id, e, k: 'perp' }); return [h, geoEdge(q, h, 'line')]; });
+    P('par', 'Parallel line', () => { const h = helper({ op: 'dir', p: q.id, e, k: 'par' }); return [h, geoEdge(q, h, 'line')]; });
+    P('foot', 'Foot of the perpendicular', () => { const f = mkPt({ op: 'foot', p: q.id, e }); return [f, geoEdge(q, f)]; });
+  }
+  if (lines.length === 2 && only(0, 2) && !(ang && E.length === 2)) P('inter', 'Intersection', () => [mkPt({ op: 'x', e: E[0].id, e2: E[1].id })]);
+  if (circs.length === 1 && lines.length === 1 && only(1, 1)) P('inter', 'Intersections', () => [1, -1].map(s => mkPt({ op: 'xlc', e: E[0].id, c: circs[0].id, s })));
+  if (circs.length === 2 && only(2, 0)) P('inter', 'Intersections', () => [1, -1].map(s => mkPt({ op: 'xcc', c1: circs[0].id, c2: circs[1].id, s })));
+  if (dots.length === 1 && circs.length === 1 && only(2, 0)) P('tan', 'Tangents from the point', () => [1, -1].flatMap(s => { const t = mkPt({ op: 'tan', p: dots[0].id, c: circs[0].id, s }); return [t, geoEdge(dots[0], t, 'line')]; }));
+  if (N.length === 1 && !E.length && !['dot', 'poly', 'mark', 'text', 'image'].includes(N[0].k)) P('ctr', 'Centre point', () => [mkPt({ op: 'ctr', n: N[0].id })]);
+  return out;
+}
+function tfOpts() {
+  tfValid();
+  const { N, E, lines, dots, only } = geoSel(), out = [];
+  if (!N.length && !E.length) return out;
+  if (dots.length === 1 && only(1, 0)) out.push(tfMark.c === dots[0].id ? ['unmark', 'Unmark centre', () => setMark('c', null)] : ['mctr', 'Mark as centre', () => setMark('c', dots[0].id)]);
+  if (lines.length === 1 && only(0, 1)) out.push(tfMark.e === lines[0].id ? ['unmark', 'Unmark mirror', () => setMark('e', null)] : ['mmir', 'Mark as mirror', () => setMark('e', lines[0].id)]);
+  if (dots.length === 2 && only(2, 0)) out.push(['mvec', 'Mark vector (first → second)', () => setMark('v', [dots[0].id, dots[1].id])]);
+  const objs = N.some(n => n.dep?.op !== 'meas') || E.length;
+  if (objs) {
+    if (tfMark.c && !(only(1, 0) && N[0].id === tfMark.c)) out.push(['rot', 'Rotate…', () => runTf('rot')], ['dil', 'Dilate…', () => runTf('dil')]);
+    if ((tfMark.e && !(only(0, 1) && E[0].id === tfMark.e)) || (!tfMark.e && lines.length === 1 && E.length === 1 && N.length)) out.push(['refl', 'Reflect', () => runTf('refl')]);
+    if (tfMark.v) out.push(['tr', 'Translate', () => runTf('tr')]);
+  }
+  return out;
+}
+function measOpts() {
+  const { N, E, pts, lines, circs, dots, only } = geoSel(), out = [], M = (id, t, dep, inv) => out.push([id, t, () => geoMake(() => [mkMeas(dep, inv)])]);
+  if (pts.length === 2 && only(2, 0)) M('mdist', 'Distance', { op: 'meas', m: 'dist', a: pts[0].id, b: pts[1].id }, pts);
+  if (lines.length === 1 && only(0, 1)) { const e = E[0], ends = ['a', 'b'].map(w => endPt(e, w)); out.push(['mdist', 'Length', () => geoMake(() => { nameLine(e); return [mkMeas({ op: 'meas', m: 'len', e: e.id }, ends)]; })]); M('mslope', 'Slope', { op: 'meas', m: 'slope', e: e.id }, ends); }
+  { const ang = geoSel().ang; if (ang) M('mang', 'Angle', { op: 'meas', m: 'ang', a: ang[0].id, b: ang[1].id, c: ang[2].id }, ang); }
+  if (circs.length === 1 && only(1, 0)) { const c = circs[0], inv = [{ x: c.x, y: c.y + c.h / 2 }]; M('mrad', 'Radius', { op: 'meas', m: 'rad', n: c.id }, inv); M('mper', 'Circumference', { op: 'meas', m: 'circ', n: c.id }, inv); M('marea', 'Area', { op: 'meas', m: 'area', n: c.id }, inv); }
+  if (N.length === 1 && !E.length && N[0].k === 'poly' && !N[0].dead) { const p = N[0], inv = [{ x: p.x, y: p.y + p.h / 2 }]; M('marea', 'Area', { op: 'meas', m: 'area', n: p.id }, inv); M('mper', 'Perimeter', { op: 'meas', m: 'per', n: p.id }, inv); }
+  if (dots.length === 1 && only(1, 0)) M('mcoord', 'Coordinates', { op: 'meas', m: 'coord', p: dots[0].id }, dots);
+  return out;
+}
+function markOpts() {
+  const { N, E, pts, lines, dots, only } = geoSel(), out = [];
+  let tri = geoSel().ang;
+  if (!tri && lines.length === 2 && only(0, 2)) {
+    const [e1, e2] = lines, sh = [e1.a, e1.b].find(x => x && (x === e2.a || x === e2.b));
+    const a = sh && (e1.a === sh ? e1.b : e1.a), c = sh && (e2.a === sh ? e2.b : e2.a);
+    if (sh && a && c) tri = [idx.get(a), idx.get(sh), idx.get(c)];
+  }
+  if (tri) { out.push(['angm', 'Angle mark', () => geoMake(() => [mkMark(...tri, 1)])], ['rang', 'Right-angle mark', () => geoMake(() => [mkMark(...tri, 'sq')])]); }
+  const unnamed = dots.filter(n => !(n.ol && OL_SIDES.some(s => n.ol[s])));
+  if (unnamed.length) out.push(['name', unnamed.length > 1 ? 'Name the points' : 'Name the point', () => mutate(() => unnamed.forEach(n => autoName(n, true)))]);
+  const segs = E.filter(geoLine);
+  if (segs.length && segs.length === E.length) {
+    const cur = segs.every(e => (e.tick || 0) === (segs[0].tick || 0)) ? String(segs[0].tick || 0) : '';
+    out.push({ t: 'Equal marks', seg: [['0', tickIc(0), 'None'], ['1', tickIc(1), 'One'], ['2', tickIc(2), 'Two'], ['3', tickIc(3), 'Three']], cur, f: v => mutate(() => segs.forEach(e => { if (+v) e.tick = +v; else delete e.tick; })) });
+  }
+  const marks = N.filter(n => n.k === 'mark');
+  if (marks.length && marks.length === N.length) {
+    const cur = marks.every(m => String(m.mc || 1) === String(marks[0].mc || 1)) ? String(marks[0].mc || 1) : '';
+    out.push({ t: 'Angle mark', seg: [['1', markIc(1), 'One arc'], ['2', markIc(2), 'Two arcs'], ['3', markIc(3), 'Three arcs'], ['sq', markIc('sq'), 'Right angle']], cur, f: v => mutate(() => marks.forEach(m => { m.mc = v === 'sq' ? 'sq' : +v; m.mr = v === 'sq' ? 12 : 16; })) });
+  }
+  return out;
+}
+function geoItems() {
+  const it = ([id, t, f]) => ({ t, ic: GEO_IC[id] || '', k: keys[id] ? keyLabel(keys[id]) : '', f });
+  const out = [];
+  for (const g of [geoOpts(), tfOpts(), measOpts(), markOpts()]) { if (!g.length) continue; if (out.length) out.push('-'); out.push(...g.map(x => x.seg ? x : it(x))); }
+  if (selNodes().some(n => n.dep && !n.hid)) { if (out.length) out.push('-'); out.push({ t: 'Make free (stop following)', ic: GEO_IC.free, f: freeSel }); }
+  return out;
+}
+const GEO_HELP = { mid: 'a line, or two points', pbis: 'a line, or two points', perp: 'a point and a line', par: 'a point and a line', foot: 'a point and a line',
+  inter: 'two lines, two circles, or a line and a circle', ctr: 'one shape', seg: 'two or more points', ray: 'two points', line: 'two points', circ2: 'a centre and a point',
+  c3: 'three points', arc: 'three points (centre first)', arc3: 'three points', abis: 'three points (vertex second)', tan: 'a point and a circle', poly: 'three or more points',
+  rot: 'what to turn (mark a centre first)', dil: 'what to scale (mark a centre first)', refl: 'what to reflect, and a line', tr: 'what to move (mark a vector first)',
+  mctr: 'one point', mmir: 'one line', mvec: 'two points', mdist: 'two points or a line', mang: 'three points (vertex second)', angm: 'three points (vertex second)' };
 function construct(id) {
-  const o = geoOptions().find(x => x[0] === id);
-  if (o) o[2](); else toast('Select ' + GEO_HELP[id] + ' first');
+  const o = [...geoOpts(), ...tfOpts(), ...measOpts(), ...markOpts()].find(x => !x.seg && x[0] === id);
+  if (o) o[2](); else toast('Select ' + (GEO_HELP[id] || 'what it needs') + ' first');
 }
-function freeSel() { mutate(() => selNodes().forEach(n => { delete n.dep; delete n.dead; })); toast('Now a free point'); }
+function freeSel() { mutate(() => selNodes().forEach(n => { if (!n.hid) { delete n.dep; delete n.dead; } })); toast('Now free'); }
 function ctxItems(x, y) {
-  const geo = geoOptions().map(([id, t, f]) => ({ t, ic: GEO_IC[id], k: keys[id] ? keyLabel(keys[id]) : '', f }));
-  if (selNodes().some(n => n.dep)) geo.push({ t: 'Make free (stop following)', ic: GEO_IC.free, f: freeSel });
+  const geo = geoItems();
   const items = [...geo, ...(geo.length ? ['-'] : []),
     { t: 'Duplicate', k: MOD + 'D', ic: IC.dup, f: duplicate },
     { t: 'Copy', k: MOD + 'C', ic: IC.copy, f: copyOut },
@@ -3681,7 +4434,7 @@ function ctxAt(cx, cy, p, target) {
   closePP();
   /* the selection overlay can sit on top of a line: look through everything under the pointer */
   const under = document.elementsFromPoint(cx, cy), lineEl = under.map(x => x.closest && x.closest('#edges [data-e], .elab')).find(Boolean);
-  const elab = target?.closest?.('.elab'), n = elab ? null : hitNode(p), eg = elab || (!n && (target?.closest?.('[data-e]') || lineEl));
+  const elab = target?.closest?.('.elab'), n0 = elab ? null : hitNode(p), n = n0 && n0.k === 'poly' && lineEl ? null : n0, eg = elab || (!n && (target?.closest?.('[data-e]') || lineEl));
   const id = n?.id || (eg ? eg.dataset.e : null);
   if (id) { if (!sel.has(id)) selectOnly(id); openBar(); return; }
   showMenu(cx, cy, [
@@ -3796,8 +4549,8 @@ addEventListener('keydown', e => {
   { const st = !mod && !e.altKey && curItems().find(x => typeof x === 'object' && x.key && x.key === lk); if (st) { e.preventDefault(); setTool('st:' + st.id, true); return; } }
   const aid = actionOf(lk);
   /* hold the connect key: connect from the selection; hold the Dot key: parallel lines; tap it: the Dot tool */
-  if (aid === 'wire') { e.preventDefault(); if (!e.repeat && !holdS && tool === 'select' && selNodes().length) { holdS = true; setTool('edge'); } return; }
-  if (aid === 'dot' && (tool === 'select' || tool === 'edge') && selNodes().length) {
+  if (aid === 'wire') { e.preventDefault(); if (!e.repeat && !holdS && (tool === 'select' || DRAWING.has(tool)) && selNodes().length) { holdS = stamp ? 'st:' + stamp.id : tool; setTool('edge'); } return; }
+  if (aid === 'dot' && (tool === 'select' || tool === 'edge' || DRAWING.has(tool)) && selNodes().length) {
     e.preventDefault(); if (!e.repeat && !parMode) { parMode = { t0: performance.now(), used: false }; vp.classList.add('place'); drawOverlay(); } return;
   }
   if (aid === 'swap' && selNodes().length !== 2) return;
@@ -3807,11 +4560,11 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => {
   const lk = (e.key || '').toLowerCase();
   if (e.key === 'Meta' || e.key === 'Control') { clearTimeout(nbT); if (nbOn) { nbOn = 0; drawOverlay(); } }
-  if (lk === keys.wire && holdS) { holdS = false; wirePend = null; setTool('select'); }
+  if (lk === keys.wire && holdS) { const back = holdS; holdS = false; wirePend = null; setTool(back === true ? 'select' : back); }
   if (lk === keys.dot && parMode) { const pm = parMode; parMode = null; vp.classList.toggle('place', tool !== 'select'); if (!pm.used && performance.now() - pm.t0 < 280) setTool('dot', true); else drawOverlay(); }
 });
 addEventListener('keyup', e => { if (e.key === ' ') { space = false; if (tool !== 'hand') vp.classList.remove('hand'); } });
-addEventListener('blur', () => { clearTimeout(nbT); nbOn = 0; if (holdS) { holdS = false; setTool('select'); } parMode = null; space = false; vp.classList.toggle('hand', tool === 'hand'); });
+addEventListener('blur', () => { clearTimeout(nbT); nbOn = 0; if (holdS) { const back = holdS; holdS = false; setTool(back === true ? 'select' : back); } parMode = null; space = false; vp.classList.toggle('hand', tool === 'hand'); });
 const zoom100 = () => flyTo({ x: innerWidth / 2 - (innerWidth / 2 - cam.x) / cam.z, y: innerHeight / 2 - (innerHeight / 2 - cam.y) / cam.z, z: 1 });
 
 /* ================= grid & settings ================= */
@@ -3868,6 +4621,8 @@ $('#btnSet').addEventListener('click', e => {
   pp._edge = (a, v) => {
     if (a === 'grid') { setGrid(v, true); refreshPP(); }
     if (a === 'magnet') { prefs.magnet = v; savePrefs(); }
+    if (a === 'autoName') { prefs.autoName = v; savePrefs(); }
+    if (a === 'lang') { window.FigLang && FigLang.set(v); return; }
     if (a === 'dock') { switchDock(v); refreshPP(); return; }
     if (a === 'dockEd') { closePP(); openDockEd(); return; }
     if (a === 'resetDock') {
@@ -3894,7 +4649,9 @@ $('#btnSet').addEventListener('click', e => {
     if (a === 'clear') { mutate(() => { doc.nodes = []; doc.edges = []; sel.clear(); }); closePP(); toast('Page cleared — ' + MOD + 'Z to undo'); }
   };
   openPP('_set', e.currentTarget, () => `<div class="setp">
+    <div class="st-row"><span class="st-t">Language</span><span data-noi18n>${seg('lang', (window.FigLang && FigLang.lang) || 'en', [['en', 'English'], ['zh', '中文']])}</span></div>
     <label class="st-row"><span class="st-t">Magnetic snapping<small>Snap to grid and shapes</small></span>${sw2('magnet', prefs.magnet)}</label>
+    <label class="st-row"><span class="st-t">Name new points<small>A, B, C… on points you place or build</small></span>${sw2('autoName', prefs.autoName)}</label>
     <div class="st-h">Toolbar</div>
     ${allDocks().map(d => `<button class="st-btn dkp ${d.id === docks.cur ? 'on' : ''}" data-a="dock" data-v="${d.id}"><span class="st-t">${esc(d.name)}</span>${d.id === docks.cur ? CHECK_IC : ''}</button>`).join('')}
     <button class="st-btn" data-a="dockEd"><span class="st-t">Customize…<small>Order, hide, own buttons</small></span></button>
@@ -3978,7 +4735,7 @@ function labelSVG(text, ts, cx, cy) {
   return ts.vert ? `<g transform="rotate(90 ${f2(cx)} ${f2(cy)})">${body}</g>` : body;
 }
 function exportSet(onlySel) {
-  const ns = onlySel ? selNodes() : doc.nodes, ids = new Set(ns.map(n => n.id));
+  const ns = (onlySel ? selNodes() : doc.nodes).filter(n => !n.hid), ids = new Set(ns.map(n => n.id));
   const es = doc.edges.filter(e => !onlySel || sel.has(e.id) || ((!e.a || ids.has(e.a)) && (!e.b || ids.has(e.b)) && (e.a || e.b)));
   return { ns, es };
 }
@@ -3987,7 +4744,7 @@ async function buildSVG(onlySel) {
   const { ns, es } = exportSet(onlySel);
   if ([...ns.map(n => n.text), ...ns.flatMap(n => Object.values(n.ol || {})), ...es.map(e => e.label)].some(hasMath)) { try { await loadMathJax(); } catch { toast('Math renderer unavailable offline — exporting as plain text'); } }
   const ps = ns.flatMap(n => corners(n));
-  let body = '';
+  let body = '', under = '';
   for (const e of es) {
     noAnim = true; const g = edgeGeom(e); noAnim = false; body += edgeMarkup(e, g, false); ps.push(g.P, g.Q, g.mid);
     if (e.label) {
@@ -4002,11 +4759,12 @@ async function buildSVG(onlySel) {
       const m = olEls.get(n.id + ':' + sd)?._m || { w: 20, h: 16 }, q = olPos(n, sd, m);
       body += labelSVG(n.ol[sd], { ...ELT, color: n.ts?.color || '#1d1d1f' }, q.x, q.y); ps.push({ x: q.x - m.w / 2, y: q.y - m.h / 2 }, { x: q.x + m.w / 2, y: q.y + m.h / 2 });
     }
-    body += `<g transform="translate(${f2(n.x)} ${f2(n.y)}) rotate(${n.rot || 0}) translate(${f2(-w / 2)} ${f2(-h / 2)})">${shapeMarkup(n, w, h, 'x' + i, aid => assets[aid])}${n.k !== 'image' ? labelSVG(n.text, n.ts, w / 2 + o.x, h / 2 + o.y) : ''}</g>`;
+    const piece = `<g transform="translate(${f2(n.x)} ${f2(n.y)}) rotate(${n.rot || 0}) translate(${f2(-w / 2)} ${f2(-h / 2)})">${shapeMarkup(n, w, h, 'x' + i, aid => assets[aid])}${n.k !== 'image' ? labelSVG(n.text, n.ts, w / 2 + o.x, h / 2 + o.y) : ''}</g>`;
+    if (n.k === 'poly') under += piece; else body += piece;
   });
   if (!ps.length) return null;
   const b = bboxOf(ps), pad = 14, x = b.l - pad, y = b.t - pad, w = b.w + pad * 2, h = b.h + pad * 2;
-  return { svg: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${f2(w)}" height="${f2(h)}" viewBox="${f2(x)} ${f2(y)} ${f2(w)} ${f2(h)}">${body}</svg>`, w, h, x, y };
+  return { svg: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${f2(w)}" height="${f2(h)}" viewBox="${f2(x)} ${f2(y)} ${f2(w)} ${f2(h)}">${under}${body}</svg>`, w, h, x, y };
 }
 async function toPNG(r, scale, bg) {
   const img = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(r.svg));
@@ -4157,7 +4915,7 @@ const pd = v => String(Math.round(v * PU * 100) / 100) + 'pt';
 let pCol = null;   // hex → name while a plain TikZ export runs
 const rgbOf = hex => { if (pCol) return pColName(hex); const h = (hex || '#000').replace('#', ''), v = h.length === 3 ? h.split('').map(c => c + c).join('') : h.slice(0, 6); return `{rgb,255:red,${parseInt(v.slice(0, 2), 16)};green,${parseInt(v.slice(2, 4), 16)};blue,${parseInt(v.slice(4, 6), 16)}}`; };
 const pFont = ts => `font=\\fontsize{${pd(ts.size)}}{${pd(ts.size * 1.25)}}\\selectfont${ts.bold ? '\\bfseries' : ''}${ts.italic ? '\\itshape' : ''}`;
-const pDash = (sd, sw) => sd === 'dash' ? 'dashed' : sd === 'dot' ? 'dotted' : /^d:/.test(sd || '') ? (q => q[0] ? `dash pattern=on ${pd(q[0] * (1 + sw))} off ${pd(q[1] * (1 + sw))}` : `dash pattern=on 0pt off ${pd(q[1] * (1 + sw) + sw)}, line cap=round`)(dashPat(sd)) : '';
+const pDash = (sd, sw) => sd === 'dash' ? `dash pattern=on ${pd(4 + sw * 2)} off ${pd(3 + sw * 1.4)}` : sd === 'dot' ? `dash pattern=on 0pt off ${pd(2.4 + sw * 1.6)}, line cap=round` : /^d:/.test(sd || '') ? (q => q[0] ? `dash pattern=on ${pd(q[0] * (1 + sw))} off ${pd(q[1] * (1 + sw))}` : `dash pattern=on 0pt off ${pd(q[1] * (1 + sw) + sw)}, line cap=round`)(dashPat(sd)) : '';
 function pColName(hex) {
   const h = lc(hex || '#000000'), x = h.length === 4 ? '#' + h.slice(1).split('').map(c => c + c).join('') : h.slice(0, 7);
   if (x === '#ffffff') return 'white'; if (x === '#000000') return 'black';
@@ -4196,13 +4954,65 @@ function plainNode(n, w, h) {
   if (n.k === 'tri') o.push('shape border rotate=' + ({ up: 90, down: 270, left: 180, right: 0 }[n.dir || 'up']));
   o.push(`minimum width=${pd(n.w)}`, `minimum height=${pd(n.h)}`, `inner sep=${pd(n.k === 'rect' ? 3 : 1)}`, 'outer sep=0pt', 'align=center');
   if ((n.k === 'rect' || n.k === 'diamond') && n.rad) o.push(`rounded corners=${pd(n.rad)}`);
-  if (n.stroke !== 'none') { o.push(`draw=${rgbOf(n.stroke)}`, `line width=${pd(n.sw)}`); const da = pDash(n.sd, n.sw); if (da) o.push(da); if (n.dbl) o.push('double=white', `double distance=${pd(2.5)}`); }
+  if (n.stroke !== 'none') { o.push(`draw=${rgbOf(n.stroke)}`, `line width=${pd(n.sw)}`); const da = pDash(n.sd, n.sw); if (da) o.push(da); }
   if (n.fill && n.fill !== 'none') o.push(`fill=${rgbOf(n.fill)}`);
   if (lc(ts.color) !== '#1d1d1f') o.push(`text=${rgbOf(ts.color)}`);
   o.push(pFont(ts));
   return o;
 }
 const P_TIP = { vee: '{Straight Barb}', tri: '{Triangle}', otri: '{Triangle[open]}', two: '{Straight Barb[]Straight Barb}', circ: '{Circle}', ocirc: '{Circle[open]}', bar: '{Bar}', hook: '{Hooks[right]}' };
+/* an SVG path's d as TikZ path operations; map turns a canvas point into a TikZ coordinate */
+function svgD2Tikz(d, map) {
+  const tk = (d.match(/[MLHVCSQTAZmlhvcsqtaz]|-?(?:\d+\.?\d*|\.\d+)(?:e-?\d+)?/g) || []);
+  let i = 0, cmd = '', cur = { x: 0, y: 0 }, start = { x: 0, y: 0 }, out = [];
+  const num = () => +tk[i++], isNum = () => i < tk.length && !/^[A-Za-z]$/.test(tk[i]);
+  const pt = (rel, x, y) => rel ? { x: cur.x + x, y: cur.y + y } : { x, y };
+  const T = q => map(q);
+  while (i < tk.length) {
+    if (/^[A-Za-z]$/.test(tk[i])) cmd = tk[i++];
+    const rel = cmd === cmd.toLowerCase(), C = cmd.toUpperCase();
+    if (C === 'Z') { out.push('-- cycle'); cur = start; continue; }
+    if (!isNum()) { i++; continue; }
+    if (C === 'M') { cur = pt(rel, num(), num()); start = cur; out.push(T(cur)); cmd = rel ? 'l' : 'L'; }
+    else if (C === 'L') { cur = pt(rel, num(), num()); out.push('-- ' + T(cur)); }
+    else if (C === 'H') { const x = num(); cur = { x: rel ? cur.x + x : x, y: cur.y }; out.push('-- ' + T(cur)); }
+    else if (C === 'V') { const y = num(); cur = { x: cur.x, y: rel ? cur.y + y : y }; out.push('-- ' + T(cur)); }
+    else if (C === 'C') { const a = pt(rel, num(), num()), b = pt(rel, num(), num()), c = pt(rel, num(), num()); out.push(`.. controls ${T(a)} and ${T(b)} .. ${T(c)}`); cur = c; }
+    else if (C === 'Q') { const q = pt(rel, num(), num()), c = pt(rel, num(), num()); const a = { x: cur.x + 2 / 3 * (q.x - cur.x), y: cur.y + 2 / 3 * (q.y - cur.y) }, b = { x: c.x + 2 / 3 * (q.x - c.x), y: c.y + 2 / 3 * (q.y - c.y) }; out.push(`.. controls ${T(a)} and ${T(b)} .. ${T(c)}`); cur = c; }
+    else if (C === 'A') {
+      const rx = Math.abs(num()), ry = Math.abs(num()); num(); const large = num(), sweep = num(), e = pt(rel, num(), num());
+      const r = (rx + ry) / 2, dx = (cur.x - e.x) / 2, dy = (cur.y - e.y) / 2, h = Math.hypot(dx, dy);
+      if (!r || h < 1e-9) { out.push('-- ' + T(e)); cur = e; continue; }
+      const rr = Math.max(r, h), f = Math.sqrt(Math.max(0, rr * rr - h * h)) / h * (large === sweep ? -1 : 1);
+      const ctr = { x: (cur.x + e.x) / 2 + f * dy, y: (cur.y + e.y) / 2 - f * dx };
+      const a0 = Math.atan2(cur.y - ctr.y, cur.x - ctr.x); let a1 = Math.atan2(e.y - ctr.y, e.x - ctr.x), sw = a1 - a0;
+      if (sweep && sw < 0) sw += 2 * Math.PI; if (!sweep && sw > 0) sw -= 2 * Math.PI;
+      for (const b of arcBz(ctr, rr, a0, sw)) out.push(`.. controls ${T(b[0])} and ${T(b[1])} .. ${T(b[2])}`);
+      cur = e;
+    } else i++;
+  }
+  return out.join(' ');
+}
+/* <path …/> elements as \path commands with the same fill, stroke, width, caps and dashes */
+function markupTikz(markup, map, wrap = o => o.join(', ')) {
+  const out = [];
+  for (const m of markup.matchAll(/<path\b([^>]*)\/?>/g)) {
+    const at = {}; for (const a of m[1].matchAll(/([\w-]+)="([^"]*)"/g)) at[a[1]] = a[2];
+    if (!at.d || at.class === 'hit' || /url\(/.test(at.stroke || '') || /url\(/.test(at.fill || '')) continue;
+    const o = [], fill = at.fill ?? '#000000', st = at.stroke;
+    if (fill && fill !== 'none') { o.push(`fill=${rgbOf(fill)}`); if (at['fill-opacity']) o.push(`fill opacity=${at['fill-opacity']}`); }
+    if (st && st !== 'none') {
+      o.push(`draw=${rgbOf(st)}`, `line width=${pd(+(at['stroke-width'] || 1))}`);
+      if (at['stroke-linecap'] === 'round') o.push('line cap=round');
+      if (at['stroke-linejoin'] === 'round') o.push('line join=round');
+      const da = (at['stroke-dasharray'] || '').split(/[\s,]+/).filter(Boolean).map(Number);
+      if (da.length >= 2) o.push(`dash pattern=${da.map((v, k) => (k % 2 ? 'off ' : 'on ') + pd(v)).join(' ')}`);
+    }
+    if (!o.length) continue;
+    out.push(`\\path[${wrap(o)}] ${svgD2Tikz(at.d, map)};`);
+  }
+  return out;
+}
 function plainEdge(e) {
   const o = [`draw=${rgbOf(e.color)}`, `line width=${pd(e.sw || 1.4)}`], a = P_TIP[e.tail] || '', b = P_TIP[e.head] || '';
   if (a || b) o.push(`${a}-${b}`);
@@ -4233,7 +5043,14 @@ function latexFor(onlySel, plain) {
   const name = new Map(ns.map((n, i) => [n.id, letters(i)]));
   const KN = { dot: 'fg dot', rect: 'fg box', circle: 'fg circle', diamond: 'fg diamond', tri: 'fg triangle', text: 'fg text', image: 'fg image' };
   const L = [], post = [], pad = Math.max(1, ...ns.map(n => name.get(n.id).length));
+  const pre = [];
   for (const n of ns) {
+    if (n.k === 'poly' || n.k === 'mark') { pre.push(geoTex(n, P, plain, col)); continue; }
+    if (n.k === 'gate') {
+      pre.push(gateTex(n, P, plain, col));
+      const s2 = sz.get(n.id), go = [`minimum width=${pd(s2.w)}`, `minimum height=${pd(s2.h)}`, 'inner sep=0pt', 'outer sep=0pt', ...(n.rot ? ['rotate=' + tn(-n.rot)] : [])];
+      L.push(`\\node[${plain ? S('gate', go) : go.join(', ')}] (${name.get(n.id)}) at ${P(n.x, n.y)} {${texText(n.text, n.ts || TS)}};`); continue;
+    }
     const o = [KN[n.k]], D = KDEF[n.k] || {}, ts = n.ts || TS;
     let body = n.k === 'image' ? '' : texText(n.text, ts);
     if (n.k === 'tri' && n.dir && n.dir !== 'up') o.push('points ' + n.dir);
@@ -4266,24 +5083,48 @@ function latexFor(onlySel, plain) {
       o.push(`label={[${plain ? S('olab', lo) : lo.filter(Boolean).join(', ')}]${where}:{${texText(t, ELT)}}}`);
     }
     L.push(`\\node[${plain ? S(n.k, o) : o.filter(Boolean).join(', ')}] ${nm} at ${P(n.x, n.y)} {${body}};`);
+    if (plain && n.dbl && n.stroke !== 'none' && n.k !== 'gate' && n.k !== 'text' && n.k !== 'dot') {
+      const s2 = sz.get(n.id), inner = `<path d="${shapeD(n, s2.w, s2.h, Math.max(3.2, n.sw * 1.6 + 2.2))}" fill="none" stroke="${n.stroke}" stroke-width="${n.sw}" ${dashArr(n.sd, n.sw)}/>`;
+      L.push(...markupTikz(inner, q => { const v = rotv(q.x - s2.w / 2, q.y - s2.h / 2, n.rot || 0); return P(n.x + v.x, n.y + v.y); }, o => S('inner', o)));
+    }
   }
+  if (pre.length) L.unshift(...pre, '');
   if (ns.length && es.length) L.push('');
   for (const e of es) {
     const A = e.a && name.get(e.a), B = e.b && name.get(e.b);
-    if ((e.a && !A) || (e.b && !B)) continue;
+    /* an end on a hidden helper (endless lines) is written as a plain coordinate */
+    const hA = e.a && !A ? idx.get(e.a) : null, hB = e.b && !B ? idx.get(e.b) : null;
+    if ((e.a && !A && !hA?.hid) || (e.b && !B && !hB?.hid)) continue;
     const g = egeo.get(e.id) || edgeGeom(e);
+    if (plain) {
+      L.push(...markupTikz(edgeMarkup(e, g, false), q => P(q.x, q.y), o => S('line', o)));
+      if (e.label) {
+        const lp = e.lp || 'auto', m = elabSize(e), q = labelPos(e, g, m.w, m.h);
+        const po = [...(lp === 'on' ? ['fill=white', `rounded corners=${pd(3)}`, `inner sep=${pd(2)}`] : [`inner sep=${pd(1)}`]), e.lcol && lc(e.lcol) !== '#1d1d1f' ? `text=${rgbOf(e.lcol)}` : '', pFont(ELT)].filter(Boolean);
+        post.push(`\\node[${S(lp === 'on' ? 'onlab' : 'lab', po)}] at ${P(q.x, q.y)} {${texText(e.label, ELT)}};`);
+      }
+      for (const r of rayEnds(e, g)) {
+        const N = 8, base = [`draw=${rgbOf(e.color)}`, `line width=${pd(e.sw || 1.4)}`, 'line cap=butt', pDash(e.dash, e.sw)].filter(Boolean);
+        for (let i = 0; i < N; i++) {
+          const a = { x: r.S.x + (r.F.x - r.S.x) * i / N, y: r.S.y + (r.F.y - r.S.y) * i / N }, b = { x: r.S.x + (r.F.x - r.S.x) * (i + 1) / N, y: r.S.y + (r.F.y - r.S.y) * (i + 1) / N };
+          L.push(`\\draw[${S('fade', [...base, 'opacity=' + tn(Math.round((1 - (i + .5) / N) * 100) / 100)])}] ${P(a.x, a.y)} -- ${P(b.x, b.y)};`);
+        }
+      }
+      continue;
+    }
     /* a line on a port meets its shape at that port: an angle anchor of the node */
     const anc = (nm, id, q) => { const n = idx.get(id), l = q && n ? toLocal(n, q) : null; return l && Math.hypot(l.x, l.y) > .5 ? `(${nm}.${Math.round((Math.atan2(-l.y, l.x) * R2D + 360) % 360) % 360})` : `(${nm})`; };
-    const ra = A ? (g.ta ? anc(A, e.a, g.ta.at) : `(${A})`) : P(e.pa.x, e.pa.y), rb = B ? (g.tb ? anc(B, e.b, g.tb.at) : `(${B})`) : P(e.pb.x, e.pb.y);
+    const ra = A ? (g.ta ? anc(A, e.a, g.ta.at) : `(${A})`) : hA ? P(hA.x, hA.y) : P(e.pa.x, e.pa.y), rb = B ? (g.tb ? anc(B, e.b, g.tb.at) : `(${B})`) : hB ? P(hB.x, hB.y) : P(e.pb.x, e.pb.y);
     const o = ['fg line', arrowSpec(e.tail, e.head), col('draw', e.color, '#1d1d1f')];
     if ((e.sw || 1.4) !== 1.4) o.push('lw=' + tn(e.sw)); o.push(dashOpt(e.dash));
     o.push({ double: 'double line', wave: 'wave', zig: 'zigzag' }[e.shape] || '');
     let op = '--', side = 1;
     if (e.a && e.a === e.b) { op = `to[loop at=${tn(-(e.la ?? -90))}]`; }
+    else if (g.bz) op = g.bz.map((c, i) => `.. controls ${P(c[0].x, c[0].y)} and ${P(c[1].x, c[1].y)} ..${i < g.bz.length - 1 ? ' ' + P(c[2].x, c[2].y) + ' ' : ''}`).join('');
     else if (g.c1) op = `.. controls ${P(g.c1.x, g.c1.y)} and ${P(g.c2.x, g.c2.y)} ..`;
     else if (g.pts && g.pts.length > 2) { op = '-- ' + g.pts.slice(1, -1).map(q => P(q.x, q.y)).join(' -- ') + ' --'; if (e.route === 'elbowr' && e.shape !== 'wave' && e.shape !== 'zig') o.push('r=10'); }
     else if (e.bend) {
-      const pa = A ? idx.get(e.a) : e.pa, pb = B ? idx.get(e.b) : e.pb, Ld = Math.hypot(pb.x - pa.x, pb.y - pa.y) || 1;
+      const pa = A || hA ? idx.get(e.a) : e.pa, pb = B || hB ? idx.get(e.b) : e.pb, Ld = Math.hypot(pb.x - pa.x, pb.y - pa.y) || 1;
       const th = Math.round(Math.atan(4 * Math.abs(e.bend) / Ld) * 180 / Math.PI);
       op = `to[bend ${e.bend > 0 ? 'left' : 'right'}=${th}]`; side = e.bend > 0 ? 1 : -1;
     }
@@ -4310,6 +5151,7 @@ function latexFor(onlySel, plain) {
     const rays = rayEnds(e, g);
     if (rays.length && !plain) o.push('fg ray=' + (rays.length === 2 ? 'both' : rays[0].w === 'b' ? 'end' : 'start'));
     L.push(`\\draw[${plain ? S('line', o) : o.filter(Boolean).join(', ')}] ${ra} ${op}${lab} ${rb};`);
+    if (e.tick) L.push(...tickTex(e, g, P, plain));
     /* the fade: short pieces, each a little lighter (works in any TikZ, no fadings library) */
     for (const r of rays) {
       const N = 8, base = plain ? [`draw=${rgbOf(e.color)}`, `line width=${pd(e.sw || 1.4)}`, 'line cap=butt', pDash(e.dash, e.sw)] : ['fg line', 'fg fade', col('draw', e.color, '#1d1d1f'), (e.sw || 1.4) !== 1.4 ? 'lw=' + tn(e.sw) : '', dashOpt(e.dash)];
@@ -4322,12 +5164,15 @@ function latexFor(onlySel, plain) {
   }
   L.push(...post);
   if (plain) {
-    const libs = [...(ns.some(n => n.k === 'diamond' || n.k === 'tri' || n.k === 'circle' && n.w !== n.h) ? ['shapes.geometric'] : []), ...(es.some(e => e.head && e.head !== 'none' || e.tail && e.tail !== 'none') ? ['arrows.meta'] : []), ...(es.some(e => e.shape === 'wave' || e.shape === 'zig') ? ['decorations.pathmorphing'] : [])];
+    /* lines and their heads are written out as paths, so only the node shapes need a library */
+    const libs = ns.some(n => n.k === 'diamond' || n.k === 'tri' || n.k === 'circle' && n.w !== n.h) ? ['shapes.geometric'] : [];
     const { defs, text } = plainStyles(L.map(l => l ? '  ' + l : '').join('\n'), uses);
     const cols = [...pCol].map(([h, n]) => `  \\definecolor{${n}}{HTML}{${h.slice(1).toUpperCase()}}`);
     const need = ['\\usepackage{tikz}', ...(libs.length ? [`\\usetikzlibrary{${libs.join(', ')}}`] : []), ...(imgs.length || ns.some(n => n.ts?.vert) ? ['\\usepackage{graphicx}'] : [])];
     const po = [`x=${PU}pt`, `y=-${PU}pt`, ...defs];
-    return { tex: `% Figura · needs ${need.join(' ')}\n${libs.length ? `\\usetikzlibrary{${libs.join(', ')}}\n` : ''}\\begin{tikzpicture}[${po.length > 2 ? '\n  ' + po.join(',\n  ') : po.join(', ')}]\n${cols.length ? cols.join('\n') + '\n' : ''}${text}\n\\end{tikzpicture}`, imgs };
+    const keep = new Set(ns.map(n => n.id)), helpers = doc.nodes.filter(n => n.hid && !keep.has(n.id) && (es.some(e => e.a === n.id || e.b === n.id) || ns.some(m => m.dep && depRefs(m.dep).includes(n.id))));
+    const rt = '%figura:' + JSON.stringify({ nodes: [...ns, ...helpers].map(n => { const c = { ...n }; delete c.dead; return c; }), edges: es });
+    return { tex: `% Figura · needs ${need.join(' ')}\n${rt}\n${libs.length ? `\\usetikzlibrary{${libs.join(', ')}}\n` : ''}\\begin{tikzpicture}[${po.length > 2 ? '\n  ' + po.join(',\n  ') : po.join(', ')}]\n${cols.length ? cols.join('\n') + '\n' : ''}${text}\n\\end{tikzpicture}`, imgs };
   }
   return { tex: `% Figura -- needs \\usepackage{figura} (figura.sty: Export > figura.sty)\n\\begin{figura}\n${L.map(l => l ? '  ' + l : '').join('\n')}\n\\end{figura}`, imgs };
   } finally { pCol = null; }
@@ -4710,15 +5555,29 @@ async function expImg(body) {
     if (b.dataset.i === 'copy') { try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': toPNG(r, EXP.scale, EXP.white) })]); toast('PNG copied'); } catch { toast('Clipboard not available here'); } }
   };
 }
+/* File: tick the pages that go into one .figura file (all, this one, or any mix) */
+let filePick = null;
 function expFile(body) {
   syncTab();
-  const n = ws.tabs.length;
-  body.innerHTML = `<div class="eopts">${seg('files', EXP.files, [['all', `All pages (${n})`], ['one', 'This page']])}<span class="grow"></span></div>
-    <div class="efile">${(EXP.files === 'all' ? ws.tabs : [curTab()]).map(t => `<div class="ef-row"><b>${esc(t.name)}</b><span class="muted">${t.doc.nodes.length} shapes · ${t.doc.edges.length} lines${t.locked ? ' · locked' : ''}</span></div>`).join('')}</div>
-    <div class="efoot"><span class="muted">A <code>.figura</code> file keeps everything, pictures too, and opens again with Import.</span><span class="grow"></span><button class="btn primary" data-f="dl">${DL_IC}<span>Download</span></button></div>`;
+  const ids = ws.tabs.map(t => t.id);
+  if (!filePick || ![...filePick].every(id => ids.includes(id))) filePick = new Set(EXP.files === 'one' ? [curTab().id] : ids);
+  const n = ids.length, k = ids.filter(id => filePick.has(id)).length;
+  const mode = k === n ? 'all' : k === 1 && filePick.has(curTab().id) ? 'one' : '';
+  const tick = on => `<span class="ef-ck${on ? ' on' : ''}"><svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg></span>`;
+  body.innerHTML = `<div class="eopts">${seg('files', mode, [['all', `All pages (${n})`], ['one', 'This page']])}<span class="grow"></span></div>
+    <div class="efile">${ws.tabs.map(t => `<button class="ef-row pick${filePick.has(t.id) ? ' on' : ''}" data-t="${t.id}">${tick(filePick.has(t.id))}<b>${esc(t.name)}</b><span class="grow"></span><span class="muted">${t.doc.nodes.length} shapes · ${t.doc.edges.length} lines${t.locked ? ' · locked' : ''}</span></button>`).join('')}</div>
+    <div class="efoot"><span class="muted">A <code>.figura</code> file keeps everything, pictures too, and opens again with Import.</span><span class="grow"></span><button class="btn primary" data-f="dl"${k ? '' : ' disabled'}>${DL_IC}<span>Download</span>${n > 1 ? `<span class="ef-n">${k}</span>` : ''}</button></div>`;
   initSegs(body);
-  body.querySelector('.eopts').onclick = e => { const b = e.target.closest('[data-a=files]'); if (b) { EXP.files = b.dataset.v; lsSet('figura-exp-v1', EXP); expShow(); } };
-  body.querySelector('[data-f=dl]').onclick = () => saveFile(EXP.files === 'all' ? ws.tabs : [curTab()]);
+  body.querySelector('.eopts').onclick = e => {
+    const b = e.target.closest('[data-a=files]'); if (!b) return;
+    EXP.files = b.dataset.v; lsSet('figura-exp-v1', EXP);
+    filePick = new Set(b.dataset.v === 'one' ? [curTab().id] : ids); expShow();
+  };
+  body.querySelector('.efile').onclick = e => {
+    const r = e.target.closest('[data-t]'); if (!r) return;
+    const id = r.dataset.t; if (filePick.has(id)) filePick.delete(id); else filePick.add(id); expShow();
+  };
+  body.querySelector('[data-f=dl]').onclick = () => { const tabs = ws.tabs.filter(t => filePick.has(t.id)); if (tabs.length) saveFile(tabs); };
 }
 $('#btnExport').addEventListener('click', () => openExport());
 
@@ -4784,6 +5643,18 @@ const DEMOS = {
   rotate: () => demoSvg(`<g transform="translate(110 55)"><g>${'<animateTransform attributeName="transform" type="rotate" values="0;0;15;15;30;30;45;45;0" keyTimes="0;.15;.2;.4;.45;.65;.7;.9;1" dur="' + DUR + '" repeatCount="indefinite"/>'}<path d="M0 -26L24 16H-24Z" fill="#fff" stroke="${INK}" stroke-width="1.3" stroke-linejoin="round"/></g></g>` + keyCap(150, 80, ']', .15, .22) + `<text x="110" y="104" class="dlabel">15° per press</text>`),
   compass: () => demoSvg(`<circle cx="70" cy="55" r="3" fill="${INK}"/><circle cx="70" cy="55" r="0" fill="none" stroke="${ACC}" stroke-width="1.2" opacity=".5">${anim('r', '0;0;55;55;0', '0;.2;.6;.9;1')}</circle><circle cx="70" cy="55" r="0" fill="none" stroke="${INK}" stroke-width="1.3" opacity="0">${anim('r', '55;55;55;55', '0;.6;.9;1')}${anim('opacity', '0;0;1;1;0', '0;.6;.62;.92;1')}</circle>` + cur('74 59;74 59;129 59;129 59;74 59', '0;.2;.6;.9;1')),
   construct: () => demoSvg(dL('M30 80L190 30', '', 1.2) + `<circle cx="110" cy="55" r="0" fill="${ACC}">${anim('r', '0;0;5;3.5;3.5;0', '0;.3;.36;.42;.92;1')}</circle><circle cx="80" cy="25" r="3.5" fill="${INK}"/><path d="M80 25L95 72" stroke="${INK}" stroke-width="1.2" stroke-dasharray="50" stroke-dashoffset="50">${anim('stroke-dashoffset', '50;50;0;0;50', '0;.55;.7;.92;1')}</path><circle cx="95" cy="72" r="0" fill="${ACC}">${anim('r', '0;0;3.5;3.5;0', '0;.68;.72;.92;1')}</circle>` + keyCap(160, 78, keys.mid.toUpperCase(), .25, .4) + keyCap(186, 78, keys.perp.toUpperCase(), .5, .65)),
+  onpt: () => demoSvg(dL('M20 85L200 25', '', 1.2) + `<circle cx="140" cy="55" r="30" fill="none" stroke="${INK}" stroke-width="1.2"/>`
+    + `<circle r="3.5" fill="${INK}" opacity="0">${anim('cx', '50;50;50;80;80', '0;.15;.25;.45;1')}${anim('cy', '75;75;75;65;65', '0;.15;.25;.45;1')}${anim('opacity', '0;0;1;1;0', '0;.15;.17;.92;1')}</circle>`
+    + `<circle cx="110" cy="55" r="0" fill="${ACC}">${anim('r', '0;0;5;3.5;3.5;0', '0;.6;.64;.68;.92;1')}</circle>`
+    + cur('54 79;54 79;54 79;84 69;114 59;114 59;54 79', '0;.15;.25;.45;.6;.92;1')),
+  xform: () => demoSvg(`<circle cx="110" cy="80" r="3" fill="${INK}"/><circle cx="110" cy="80" r="8" fill="none" stroke="${ACC}" stroke-width="1.2" stroke-dasharray="2.5 2.5"/>`
+    + `<path d="M120 70L160 70L140 40Z" fill="#dbeafe" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/>`
+    + `<g opacity="0">${anim('opacity', '0;0;1;1;0', '0;.25;.3;.92;1')}<path d="M120 70L160 70L140 40Z" fill="#dbeafe" fill-opacity=".6" stroke="${ACC}" stroke-width="1.2" stroke-dasharray="3 2" stroke-linejoin="round"/><animateTransform attributeName="transform" type="rotate" values="0 110 80;0 110 80;-90 110 80;-90 110 80" keyTimes="0;.3;.6;1" dur="${DUR}" repeatCount="indefinite"${SPL(3)}/></g>`
+    + keyCap(176, 84, '90°', .1, .3)),
+  measure: () => demoSvg(`<path stroke="${INK}" stroke-width="1.2" d="M40 60L150 60">${anim('d', 'M40 60L150 60;M40 60L150 60;M40 60L180 40;M40 60L180 40;M40 60L150 60', '0;.45;.7;.9;1')}</path><circle cx="40" cy="60" r="3.5" fill="${INK}"/>`
+    + `<circle r="3.5" fill="${INK}">${anim('cx', '150;150;180;180;150', '0;.45;.7;.9;1')}${anim('cy', '60;60;40;40;60', '0;.45;.7;.9;1')}</circle>`
+    + `<text x="110" y="92" class="dtex" opacity="0">${anim('opacity', '0;0;1;1;0;0', '0;.12;.16;.5;.55;1')}AB = 2.58 cm</text><text x="110" y="92" class="dtex" opacity="0">${anim('opacity', '0;0;1;1;0', '0;.55;.6;.92;1')}AB = 3.31 cm</text>`
+    + cur('154 64;154 64;184 44;184 44;154 64', '0;.45;.7;.9;1')),
   ray: () => demoSvg(`<defs><linearGradient id="dmr" x1="0" x2="1"><stop offset="0" stop-color="${INK}"/><stop offset="1" stop-color="${INK}" stop-opacity="0"/></linearGradient></defs>` + `<circle cx="40" cy="55" r="3.5" fill="${INK}"/><circle cx="140" cy="55" r="3.5" fill="${INK}"/>` + dL('M40 55H140') + `<rect x="144" y="54.3" height="1.4" width="0" fill="url(#dmr)">${anim('width', '0;0;50;50;0', '0;.3;.6;.92;1')}</rect>`),
   laser: () => demoSvg(`<path d="M30 80C60 20 100 20 120 55S180 90 195 30" fill="none" stroke="#ff4040" stroke-width="3" stroke-linecap="round" stroke-dasharray="260" stroke-dashoffset="260" opacity=".8">${anim('stroke-dashoffset', '260;0;0;-260', '0;.5;.6;1')}</path>`),
   prop: () => demoSvg(`<rect x="60" y="20" height="70" rx="3" fill="#fff" stroke="${INK}" stroke-width="1.3" width="40">${anim('width', '40;40;100;70;70;40', '0;.1;.4;.5;.9;1')}</rect>` + keyCap(150, 8, '⇧', .45, .9) + cur('100 90;100 90;160 90;130 90;130 90;100 90', '0;.1;.4;.5;.9;1')),
@@ -4809,6 +5680,9 @@ const GUIDE_KEYS = () => [
   ['rotate', [keys.rotL, keys.rotR], 'Rotate by 15°', 'Turns the selection; or drag the dot above it (snaps every 15°).'],
   ['compass', [keys.compass], 'Compass', 'Press on a centre (a shape, or any point) and drag to the circle, or click the centre and then a point. Built on shapes, the circle follows them when they move.'],
   ['construct', [keys.mid, keys.perp, keys.pbis], 'Constructions', `Select a line (or two points) for the midpoint ${keys.mid.toUpperCase()} or perpendicular bisector ${keys.pbis.toUpperCase()}; a point and a line for the perpendicular ${keys.perp.toUpperCase()}, parallel ${keys.par.toUpperCase()} or reflection ${keys.refl.toUpperCase()}; two lines or circles for the intersection ${keys.inter.toUpperCase()}. Or right-click. Built points follow their objects and cannot be dragged; restyle them, or build on them again.`],
+  ['onpt', [keys.dot], 'Points on objects', 'With the Dot tool, click a line or circle: the point stays on it and slides along when dragged. Click where two of them cross: their intersection.'],
+  ['xform', ['right-click'], 'Transform', 'Right-click a point → Mark as centre (a line → Mark as mirror, two points → Mark vector). Then select shapes, points and lines → Rotate…, Dilate…, Reflect or Translate. The copies follow the originals.'],
+  ['measure', ['right-click'], 'Measure and mark', 'Two points → Distance, a line → Length / Slope, three points → Angle (vertex second), a circle or polygon → Area… The value updates as you drag. Also angle marks, right-angle marks, equal-length ticks and point names.'],
   ['ray', [keys.edge], 'Rays', 'With a line selected: the ray ends in the arrow row (or Start / End heads). The line runs one grid step past its last point and fades, in LaTeX too.'],
   ['laser', [keys.laser], 'Laser pointer', 'For presenting: a glowing dot or a fading trail (pick in its bar).'],
 ];
@@ -4889,6 +5763,7 @@ const ACTIONS = [
   ['rect', 'Tools', 'Box', 'r', () => setTool('rect', true)],
   ['tri', 'Tools', 'Triangle', 'y', () => setTool('tri', true)],
   ['diamond', 'Tools', 'Diamond', 'd', () => setTool('diamond', true)],
+  ['gate', 'Tools', 'Logic gate (AND, OR, NOT, NAND, NOR, XOR …)', 'a', () => setTool('gate', true)],
   ['dot', 'Tools', 'Dot · hold with shapes selected: parallel lines', 'p', () => setTool('dot', true)],
   ['text', 'Tools', 'Text (or double-click the canvas)', 't', () => setTool('text', true)],
   ['edge', 'Tools', 'Connector · again: line style', 'e', () => setTool('edge', true)],
@@ -4897,12 +5772,32 @@ const ACTIONS = [
   ['compass', 'Tools', 'Compass: centre, then a point on the circle', 'c', () => setTool('compass', true)],
   ['wire', 'Connect', 'Hold with shapes selected: connect them to what you click', 's', () => {}],
   ['mid', 'Construct', 'Midpoint (a line, or two points)', 'm', () => construct('mid')],
-  ['perp', 'Construct', 'Perpendicular from a point to a line', 'j', () => construct('perp')],
+  ['perp', 'Construct', 'Perpendicular line (a point and a line)', 'j', () => construct('perp')],
   ['pbis', 'Construct', 'Perpendicular bisector (a line, or two points)', 'b', () => construct('pbis')],
   ['par', 'Construct', 'Parallel line through a point', 'n', () => construct('par')],
   ['inter', 'Construct', 'Intersection (lines / circles)', 'x', () => construct('inter')],
-  ['refl', 'Construct', 'Reflect a point in a line', 'u', () => construct('refl')],
+  ['refl', 'Transform', 'Reflect in the marked mirror (or the one selected line)', 'u', () => construct('refl')],
   ['ctr', 'Construct', 'Centre point of a shape', 'q', () => construct('ctr')],
+  ['seg', 'Construct', 'Segment (two points · 3+ points: closed)', '', () => construct('seg')],
+  ['ray', 'Construct', 'Ray (from the first point through the second)', '', () => construct('ray')],
+  ['line', 'Construct', 'Line (endless, through two points)', '', () => construct('line')],
+  ['foot', 'Construct', 'Foot of the perpendicular (a point and a line)', '', () => construct('foot')],
+  ['abis', 'Construct', 'Angle bisector (three points, vertex second)', '', () => construct('abis')],
+  ['circ2', 'Construct', 'Circle by centre and point', '', () => construct('circ2')],
+  ['c3', 'Construct', 'Circle through three points', '', () => construct('c3')],
+  ['arc', 'Construct', 'Arc on a circle (centre, start, end)', '', () => construct('arc')],
+  ['arc3', 'Construct', 'Arc through three points', '', () => construct('arc3')],
+  ['tan', 'Construct', 'Tangents from a point to a circle', '', () => construct('tan')],
+  ['poly', 'Construct', 'Polygon interior (three or more points)', '', () => construct('poly')],
+  ['mctr', 'Transform', 'Mark the selected point as centre', '', () => construct('mctr')],
+  ['mmir', 'Transform', 'Mark the selected line as mirror', '', () => construct('mmir')],
+  ['mvec', 'Transform', 'Mark a vector (two points)', '', () => construct('mvec')],
+  ['rot', 'Transform', 'Rotate about the marked centre', '', () => construct('rot')],
+  ['dil', 'Transform', 'Dilate from the marked centre', '', () => construct('dil')],
+  ['tr', 'Transform', 'Translate by the marked vector', '', () => construct('tr')],
+  ['mdist', 'Measure', 'Distance (two points) · length (a line)', '', () => construct('mdist')],
+  ['mang', 'Measure', 'Angle (three points, vertex second)', '', () => construct('mang')],
+  ['angm', 'Measure', 'Angle mark (three points, vertex second)', '', () => construct('angm')],
   ['swap', 'Edit', 'Swap two selected shapes', 'w', () => swapNodes()],
   ['rotL', 'Edit', 'Rotate −15°', '[', () => rotSel(-15)],
   ['rotR', 'Edit', 'Rotate +15°', ']', () => rotSel(15)],
@@ -4926,6 +5821,9 @@ const FIXED = [
   ['Connect', 'Bend / Bézier handles / elbow step', 'Drag the dots on a selected line'],
   ['Connect', 'Move a line end along a shape, onto another, or off it', 'Drag its end dot'],
   ['Connect', 'Ports evenly · packed to the ends · in the middle', 'Right-click a shape'],
+  ['Construct', 'Point on a line / circle · at an intersection', 'Dot tool: click it'],
+  ['Construct', 'Slide a point along its line or circle', 'Drag it'],
+  ['Construct', 'Every construction, transform and measurement for the selection', 'Right-click · compass in the style bar'],
   ['Edit', 'Show wired neighbours', `Hold ${IS_MAC ? '⌘' : 'Ctrl'}`],
   ['Edit', 'Duplicate while moving', `${ALT} + drag`],
   ['Edit', 'Add to the selection', '⇧ + click'],
@@ -4961,12 +5859,19 @@ function updateKbd() {
 loadKeys();
 
 let helpTab = 'guide', recording = null;
+/* the user guide is its own site; locally it runs beside the app on port 8768 */
+const GUIDE_URL = 'https://figura-guide.netlify.app';
+function guideURL() {
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:';
+  const base = local ? (location.protocol === 'file:' ? 'docs/index.html' : `${location.protocol}//${location.hostname}:8768/`) : GUIDE_URL + '/';
+  return base + '?lang=' + ((window.FigLang && FigLang.lang) || 'en');
+}
 function openHelp(tab) {
   if (tab === 'guide' || tab === 'keys') helpTab = tab;
   closePP(); closeMenu();
   const box = $('#modal .mbox');
   box.classList.add('help');
-  box.innerHTML = `<div class="ehead"><h2>Help</h2>${seg('htab', helpTab, [['guide', 'Guide'], ['keys', 'Shortcuts']])}<span class="grow"></span><button class="ibtn" data-x title="Close (Esc)">${IC.close}</button></div><div id="helpBody" class="hbody"></div>`;
+  box.innerHTML = `<div class="ehead"><h2>Help</h2>${seg('htab', helpTab, [['guide', 'Guide'], ['keys', 'Shortcuts']])}<span class="grow"></span><a class="hguide" href="${guideURL()}" target="_blank" rel="noopener">Full guide<svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4 2h6v6M10 2 3 9"/></svg></a><button class="ibtn" data-x title="Close (Esc)">${IC.close}</button></div><div id="helpBody" class="hbody"></div>`;
   $('#modal').hidden = false; initSegs($('.ehead', box));
   box.onclick = async e => {
     if (e.target.closest('[data-x]')) { closeModal(); return; }
@@ -4990,7 +5895,7 @@ function drawHelp() {
   else { body.innerHTML = guideHTML(); wireGuide(body); }
 }
 function keysTable() {
-  const groups = ['Tools', 'Draw', 'Connect', 'Edit', 'View'];
+  const groups = ['Tools', 'Draw', 'Connect', 'Construct', 'Transform', 'Measure', 'Edit', 'View'];
   const rows = g => [
     ...ACTIONS.filter(a => a[1] === g).map(a => `<tr><td>${a[2]}</td><td class="kc"><button class="kbtn${keys[a[0]] !== a[3] ? ' custom' : ''}" data-rebind="${a[0]}" title="Click, then press a new key">${keyLabel(keys[a[0]])}</button></td></tr>`),
     ...FIXED.filter(f => f[0] === g).map(f => `<tr class="fixed"><td>${f[1]}</td><td class="kc"><span class="kfix">${f[2]}</span></td></tr>`),
@@ -5039,11 +5944,11 @@ $('#dock').addEventListener('pointerdown', e => e.stopPropagation());
 addEventListener('resize', () => { applyDockSide(); applyCam(); placeSub(); });
 
 /* ================= toolbar layouts: order, hidden buttons, own buttons ("stamps": a tool with a saved look), presets ================= */
-const TOOL_NAMES = { select: 'Select', hand: 'Hand', circle: 'Circle', rect: 'Box', tri: 'Triangle', diamond: 'Diamond', dot: 'Dot', text: 'Text', edge: 'Connector', compass: 'Compass', image: 'Image', laser: 'Laser pointer' };
+const TOOL_NAMES = { select: 'Select', hand: 'Hand', circle: 'Circle', rect: 'Box', tri: 'Triangle', diamond: 'Diamond', gate: 'Logic gate', dot: 'Dot', text: 'Text', edge: 'Connector', compass: 'Compass', image: 'Image', laser: 'Laser pointer' };
 const TOOL_MORE = { select: ' · again: box ↔ lasso', hand: ', or hold Space' };
 const ZXC = { z: '#d8f8d8', x: '#e8a5a5', h: '#ffffbf', he: '#4488cc' };
 const SYS_DOCKS = [
-  { id: 'general', name: 'General', items: ['select', 'hand', '|', 'circle', 'rect', 'tri', 'diamond', 'dot', 'text', 'edge', 'compass', 'image', '|', 'laser'] },
+  { id: 'general', name: 'General', items: ['select', 'hand', '|', 'circle', 'rect', 'tri', 'diamond', 'gate', 'dot', 'text', 'edge', 'compass', 'image', '|', 'laser'] },
   { id: 'zx', name: 'ZX-calculus', items: ['select', 'hand', '|',
     { id: 'zx-z', k: 'circle', name: 'Z spider', key: 'z', s: { fill: ZXC.z, stroke: '#1d1d1f', sw: 1, w: 22, h: 22, ts: { size: 11 } } },
     { id: 'zx-x', k: 'circle', name: 'X spider', key: 'x', s: { fill: ZXC.x, stroke: '#1d1d1f', sw: 1, w: 22, h: 22, ts: { size: 11 } } },
@@ -5056,6 +5961,13 @@ const SYS_DOCKS = [
     { id: 'zx-w', k: 'edge', name: 'Wire', key: 'e', s: { head: 'none', tail: 'none', dash: 'solid', shape: 'line', sw: 1.4, color: '#1d1d1f' } },
     { id: 'zx-he', k: 'edge', name: 'Hadamard edge', key: 'w', s: { head: 'none', tail: 'none', dash: 'dash', shape: 'line', sw: 1.6, color: ZXC.he } },
     '|', 'laser'] },
+  { id: 'geo', name: 'Geometry', items: ['select', 'hand', '|', 'dot',
+    { id: 'geo-seg', k: 'edge', name: 'Segment', key: 'e', s: { head: 'none', tail: 'none', dash: 'solid', shape: 'line', sw: 1.2, color: '#1d1d1f' } },
+    { id: 'geo-ray', k: 'edge', name: 'Ray', key: 'r', s: { head: 'ray', tail: 'none', dash: 'solid', shape: 'line', sw: 1.2, color: '#1d1d1f' } },
+    { id: 'geo-line', k: 'edge', name: 'Line', key: 'l', s: { head: 'ray', tail: 'ray', dash: 'solid', shape: 'line', sw: 1.2, color: '#1d1d1f' } },
+    'compass', '|',
+    { id: 'geo-aux', k: 'edge', name: 'Helper line (dashed)', key: 'a', s: { head: 'none', tail: 'none', dash: 'dash', shape: 'line', sw: 1, color: '#6e7581' } },
+    'text', '|', 'laser'] },
   { id: 'cat', name: 'Category theory', items: ['select', 'hand', '|',
     { id: 'ct-o', k: 'text', name: 'Object', key: 'o', s: { text: '$A$', ts: { size: 15 } } },
     'dot', '|',
@@ -5126,7 +6038,7 @@ function stampIc(st, size = 18) {
   if (gl) g += `<text x="12" y="14.6" font-size="${gl.length > 1 ? 6.5 : 8}" text-anchor="middle" fill="currentColor" stroke="none" font-family="KaTeX_Main,serif">${esc(gl)}</text>`;
   return sv(g, size);
 }
-const builtinIc = t => (t === 'select' ? IC[prefs.selMode === 'lasso' ? 'lasso' : 'select'] : t === 'edge' ? edgeToolIc(prefs.edge) : t === 'dot' ? dotIc(defOf('dot').w, 18) : IC[t]);
+const builtinIc = t => (t === 'gate' ? gateIc(defOf('gate').g || 'and', 18) : t === 'select' ? IC[prefs.selMode === 'lasso' ? 'lasso' : 'select'] : t === 'edge' ? edgeToolIc(prefs.edge) : t === 'dot' ? dotIc(defOf('dot').w, 18) : IC[t]);
 const itemIc = it => (typeof it === 'string' ? builtinIc(it) : stampIc(it));
 const itemName = it => (typeof it === 'string' ? TOOL_NAMES[it] || it : it.name || TOOL_NAMES[it.k]);
 function renderDock(anim) {
@@ -5558,5 +6470,5 @@ drawSub();
 if (document.fonts) document.fonts.ready.then(() => { meas.clear(); for (const el of elabEls.values()) el._m = null; for (const el of olEls.values()) el._m = null; render(); });
 addEventListener('load', () => { htmlCache.clear(); meas.clear(); for (const el of nodeEls.values()) el._t = null; for (const el of elabEls.values()) el._t = null; for (const el of olEls.values()) el._t = null; render(); placeSub(); });
 if (!lsGet(LS.seen)) { lsSet(LS.seen, 1); setTimeout(() => toast('Tip: press ? for every shortcut', 3200), 800); }
-window.Figura = { get doc() { return doc; }, get pps() { return { ppHover, ppKey }; }, get sel() { return sel; }, render, latex: only => latexFor(!!only).tex, tikz: only => latexFor(!!only, true).tex, get sty() { return styText(); }, parseTikz };
+window.Figura = { svg: o => buildSVG(!!o), syncSeg: sg => { const on = sg.querySelector('.on'); if (on) syncPill(sg, on, true); }, get doc() { return doc; }, get pps() { return { ppHover, ppKey }; }, get sel() { return sel; }, render, latex: only => latexFor(!!only).tex, tikz: only => latexFor(!!only, true).tex, get sty() { return styText(); }, parseTikz };
 })();
