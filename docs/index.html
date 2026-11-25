@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Figura Guide</title>
+<meta name="description" content="How to use Figura: draw diagrams in the browser and export clean TikZ for LaTeX.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235b5bd6'/%3E%3Ccircle cx='11' cy='20' r='5' fill='none' stroke='white' stroke-width='2'/%3E%3Crect x='17' y='6' width='9' height='9' rx='2' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M15 16.5 19 13' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+<link rel="stylesheet" href="guide.css?v=1">
+</head>
+<body>
+
+<header class="top">
+  <button class="icon-btn menu-btn" id="menu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <a class="brand" href="#/home">
+    <svg class="mark" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#5b5bd6"/><circle cx="11" cy="20" r="5" fill="none" stroke="#fff" stroke-width="2"/><rect x="17" y="6" width="9" height="9" rx="2" fill="none" stroke="#fff" stroke-width="2"/><path d="M15 16.5 19 13" stroke="#fff" stroke-width="2"/></svg>
+    Figura <small>Guide</small>
+  </a>
+  <div class="grow"></div>
+  <button class="search-btn" id="search" aria-label="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+  <div class="plat" role="group" aria-label="Keyboard"><i></i><button data-p="mac">Mac</button><button data-p="win">Windows</button></div>
+  <button class="icon-btn" id="theme" aria-label="Theme"></button>
+  <a class="icon-btn" data-repo target="_blank" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.26-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.3 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2.2z"/></svg></a>
+  <a class="open-app" data-app target="_blank" rel="noopener">Open Figura</a>
+</header>
+<div class="scrim"></div>
+
+<div class="shell">
+<nav class="side" id="side" aria-label="Guide"></nav>
+<main>
+
+<!-- ================= START ================= -->
+<article data-page="home" data-group="Start" data-title="Introduction">
+  <div class="hero">
+    <h1>Figura</h1>
+    <p class="lead">A canvas in your browser for diagrams of every kind: automata, category diagrams, circuits, geometric constructions, ZX-calculus. Draw it once, paste clean TikZ into your paper.</p>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <svg viewBox="0 0 720 170" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path class="draw" style="--l:1;--d:.1s" pathLength="1" d="M20 95h52"/>
+      <path class="draw" style="--l:1;--d:.1s" pathLength="1" d="m64 89 8 6-8 6"/>
+      <circle class="draw" style="--l:1;--d:.25s" pathLength="1" cx="110" cy="95" r="36"/>
+      <path class="draw" style="--l:1;--d:.6s" pathLength="1" d="M146 88Q260 40 374 88"/>
+      <path class="draw" style="--l:1;--d:.6s" pathLength="1" d="m365 80 9 8-12 3"/>
+      <path class="draw" style="--l:1;--d:.75s" pathLength="1" d="M374 104Q260 150 146 104"/>
+      <path class="draw" style="--l:1;--d:.75s" pathLength="1" d="m156 112-10-8 12-3"/>
+      <circle class="draw" style="--l:1;--d:.45s" pathLength="1" cx="410" cy="95" r="36"/>
+      <circle class="draw" style="--l:1;--d:.55s" pathLength="1" cx="410" cy="95" r="30"/>
+      <path class="draw" style="--l:1;--d:.9s" pathLength="1" d="M396 61C380 20 440 20 424 61"/>
+      <path class="draw" style="--l:1;--d:.9s" pathLength="1" d="m417 54 7 7 2-10"/>
+      <rect class="draw" style="--l:1;--d:1s;stroke:var(--accent)" pathLength="1" x="540" y="62" width="150" height="66" rx="10" fill="var(--accent-soft)"/>
+      <path class="draw" style="--l:1;--d:1.15s" pathLength="1" stroke-dasharray="1" d="M446 95h90"/>
+      <path class="draw" style="--l:1;--d:1.15s" pathLength="1" d="m528 89 8 6-8 6"/>
+      <g stroke="none" fill="currentColor" font-family="Newsreader, Georgia, serif" font-style="italic" font-size="22">
+        <text class="pop" style="--d:.5s" x="98" y="102">q<tspan font-size="14" dy="5">0</tspan></text>
+        <text class="pop" style="--d:.7s" x="398" y="102">q<tspan font-size="14" dy="5">1</tspan></text>
+        <text class="pop" style="--d:.9s" x="252" y="50" font-size="19">a</text>
+        <text class="pop" style="--d:1s" x="252" y="152" font-size="19">b</text>
+        <text class="pop" style="--d:1.05s" x="404" y="18" font-size="19">a</text>
+      </g>
+      <text class="pop" style="--d:1.35s" x="556" y="101" stroke="none" fill="var(--accent-ink)" font-family="ui-monospace, Menlo, monospace" font-size="14">\begin{tikzpicture}</text>
+    </svg>
+  </div>
+  <div class="cta">
+    <a class="btn pri" data-app target="_blank" rel="noopener">Open Figura</a>
+    <a class="btn sec" href="#/start">Getting started</a>
+  </div>
+
+  <h2>What you can do</h2>
+  <div class="feats">
+    <div class="feat"><a href="#/shapes">Shapes that fit their text</a><p>Circles, boxes, diamonds, triangles, dots and pictures. A shape grows with what you write in it and shrinks back.</p></div>
+    <div class="feat"><a href="#/text">Maths everywhere</a><p><code>$…$</code>, <code>\[…\]</code> and <code>align</code> in shapes, labels and lines, set in the same fonts as your paper.</p></div>
+    <div class="feat"><a href="#/lines">Lines of every kind</a><p>Arcs, Bézier curves, elbows; double, wavy or zigzag; many arrow heads, loops, rays, labels you can drag.</p></div>
+    <div class="feat"><a href="#/wiring">Wire fast</a><p>Many to one in a click, a stroke through shapes, parallel lines, ports that stay where you put them.</p></div>
+    <div class="feat"><a href="#/geometry">Constructions</a><p>Midpoints, perpendiculars, intersections and compass circles that follow the points they are built on.</p></div>
+    <div class="feat"><a href="#/tikz">TikZ in, TikZ out</a><p>Export code that compiles with only <code>\usepackage{tikz}</code>, and paste TikZ back in to keep editing.</p></div>
+  </div>
+
+  <h2>No install, no account</h2>
+  <p>Figura is a single web page. Your drawings are saved in your browser as you work, and the whole thing runs offline once it has loaded. It works with a mouse, a trackpad, a pen or your finger.</p>
+  <p>Its sibling project is <a href="https://github.com/zhoujasper/ZX-Draw" target="_blank" rel="noopener">ZX Draw</a>; the two share their look and most of their habits.</p>
+</article>
+
+<article data-page="start" data-group="Start" data-title="Getting started">
+  <h1>Getting started</h1>
+  <p class="lead">Your first diagram in a minute, and a map of the screen.</p>
+
+  <h2>Your first diagram</h2>
+  <ol class="steps">
+    <li>Press <kbd>O</kbd> and click the canvas twice, some way apart. You now have two circles.</li>
+    <li>Double-click each circle and type <code>$q_0$</code> and <code>$q_1$</code>. Press <kbd>Esc</kbd> or click away when done.</li>
+    <li>Press <kbd>E</kbd> for the connector, then drag from one circle to the other. Double-click the line and type its label.</li>
+    <li>Press <kbd>Mod</kbd> <kbd>S</kbd>, keep the <strong>TikZ</strong> tab and press <strong>Copy</strong>. Paste it into your <code>.tex</code> file.</li>
+  </ol>
+
+  <h2>The screen</h2>
+  <div class="tbl"><table>
+    <tr><th>Part</th><th>What it does</th></tr>
+    <tr><td>Toolbar</td><td>The tools, in the dock at the bottom. Drag its grip to put it on the left or right; double-click the grip to cycle.</td></tr>
+    <tr><td>Tool row</td><td>Picking a tool springs a small row out of the toolbar with that tool's options: fill, border, arrow heads, sizes.</td></tr>
+    <tr><td>Style bar</td><td>Click an object that is already selected (or right-click it) and a two-row bar opens above it: colours, borders, text, layers, alignment.</td></tr>
+    <tr><td>Pages</td><td>Tabs along the top. Each page has its own drawing, view and lock.</td></tr>
+    <tr><td>Top right</td><td>Grid switch, open / export, settings, help.</td></tr>
+    <tr><td>Bottom corners</td><td>Lock and zoom on one side, the minimap on the other.</td></tr>
+  </table></div>
+
+  <h2>Moving around</h2>
+  <ul>
+    <li><strong>Pan</strong>: hold <kbd>Space</kbd> and drag, use the hand tool <kbd>H</kbd>, or scroll with two fingers.</li>
+    <li><strong>Zoom</strong>: <kbd>Mod</kbd> + scroll, pinch, or <kbd>=</kbd> and <kbd>−</kbd>. <kbd>F</kbd> fits everything on screen.</li>
+    <li><strong>Minimap</strong>: click or drag in it to jump.</li>
+  </ul>
+
+  <h2>Selecting</h2>
+  <ul>
+    <li>Click to select, <kbd>Shift</kbd>-click to add, drag on empty canvas for a box.</li>
+    <li>Press <kbd>V</kbd> again to switch the box to a <strong>lasso</strong>; hold <kbd>Alt</kbd> while dragging to flip it for one go.</li>
+    <li><kbd>Mod</kbd> <kbd>A</kbd> selects everything on the page.</li>
+  </ul>
+
+  <h2>On a phone</h2>
+  <p>The toolbar sits at the bottom and panels open as sheets. Tap to select, drag to move, pinch to zoom, and press and hold anywhere for the menu that a right-click gives on a computer.</p>
+
+  <p class="note">Press <kbd>?</kbd> in Figura at any time for the built-in guide, with a looping demo for every gesture.</p>
+</article>
+
+<!-- ================= DRAWING ================= -->
+<article data-page="shapes" data-group="Drawing" data-title="Shapes">
+  <h1>Shapes</h1>
+  <p class="lead">Circles, boxes, triangles, diamonds and dots, drawn like in any design tool.</p>
+
+  <h2>Drawing a shape</h2>
+  <div class="tbl"><table>
+    <tr><th>Tool</th><th>Key</th></tr>
+    <tr><td>Circle</td><td><kbd>O</kbd></td></tr>
+    <tr><td>Box</td><td><kbd>R</kbd></td></tr>
+    <tr><td>Triangle</td><td><kbd>Y</kbd></td></tr>
+    <tr><td>Diamond</td><td><kbd>D</kbd></td></tr>
+    <tr><td>Dot</td><td><kbd>P</kbd></td></tr>
+  </table></div>
+  <p>Click to place a shape at its default size, or drag to draw its box. While dragging:</p>
+  <ul>
+    <li><kbd>Shift</kbd> keeps it in proportion: a square, a round circle, a square diamond, an equilateral triangle.</li>
+    <li><kbd>Alt</kbd> draws from the centre outward.</li>
+    <li><kbd>Space</kbd> lets you move the shape before letting go.</li>
+  </ul>
+  <p>A new shape takes the look you last used for that kind, so a row of states needs no restyling.</p>
+
+  <h2>Resize and rotate</h2>
+  <p>A selected shape shows eight handles and a rotate knob. <kbd>Shift</kbd> keeps proportions while resizing, <kbd>Alt</kbd> resizes around the centre. Rotation is drawn softly to multiples of 15°; with <kbd>Shift</kbd> it steps. <kbd>[</kbd> and <kbd>]</kbd> rotate by 15°.</p>
+
+  <h2>Fill and border</h2>
+  <p>The tool row sets the look of new shapes, the style bar changes selected ones. Both offer:</p>
+  <ul>
+    <li><strong>Fill</strong>: quick colours, none, or any colour from the picker (square, wheel or sliders; type <code>#hex</code>, <code>rgb()</code>, <code>hsl()</code> or a CSS name).</li>
+    <li><strong>Border</strong>: width, solid / dashed / dotted, double, colour or none.</li>
+    <li><strong>Corners</strong>: rounded boxes with an exact radius.</li>
+    <li><strong>Triangle direction</strong> and <strong>diamond shape</strong> (square, wide, tall).</li>
+  </ul>
+  <p class="note">Right-click any quick colour, width or style preset to edit, move or remove it. The <strong>+</strong> at the end of a row keeps the current look as a new preset.</p>
+
+  <h2>Dots</h2>
+  <p>Dots are small filled circles for graph vertices and geometry. Click to place one, snapped to the grid. Their sizes are presets in the tool row; a selected dot has an exact size stepper.</p>
+
+  <h2>Moving and copying</h2>
+  <ul>
+    <li>Drag to move. On the grid the shape's centre snaps; in free mode guides show when edges and centres line up.</li>
+    <li><kbd>Alt</kbd> + drag leaves a copy behind. <kbd>Mod</kbd> <kbd>D</kbd> duplicates.</li>
+    <li>Arrow keys nudge. <kbd>W</kbd> swaps two selected shapes, each taking over the other's lines.</li>
+  </ul>
+</article>
+
+<article data-page="text" data-group="Drawing" data-title="Text and maths">
+  <h1>Text and maths</h1>
+  <p class="lead">Write inside shapes, beside them, on lines or anywhere on the canvas, with LaTeX maths.</p>
+
+  <h2>Writing</h2>
+  <ul>
+    <li><strong>In a shape</strong>: double-click it, or select it and press <kbd>Enter</kbd>. The shape grows to fit.</li>
+    <li><strong>On the canvas</strong>: double-click empty space, or use the text tool <kbd>T</kbd>. Text left empty is removed.</li>
+    <li><strong>Formatting</strong>: <kbd>Mod</kbd> <kbd>B</kbd>, <kbd>I</kbd>, <kbd>U</kbd>; size and colour in the style bar; vertical text in the text panel.</li>
+  </ul>
+
+  <h2>Maths</h2>
+  <p>Anything between dollars is typeset with KaTeX on the canvas and in the same fonts as LaTeX on export.</p>
+  <div class="tbl"><table>
+    <tr><th>Write</th><th>For</th></tr>
+    <tr><td><code>$x^2$</code> or <code>\(x^2\)</code></td><td>Inline maths</td></tr>
+    <tr><td><code>$$…$$</code> or <code>\[…\]</code></td><td>Display maths</td></tr>
+    <tr><td><code>\begin{align}…\end{align}</code></td><td>Aligned lines (also <code>gather</code>, <code>equation</code>)</td></tr>
+  </table></div>
+  <p>Letters such as π or → typed directly are turned into <code>\pi</code> and <code>\to</code> in the export, so pdflatex never chokes on them.</p>
+
+  <h2>Labels outside a shape</h2>
+  <p>Double-click just outside a shape's side to write a label there, or use the label button in the style bar. Drag a label around the shape to any angle; it settles on the middle of a side when close. The angle is kept in the TikZ export.</p>
+
+  <h2>Labels on lines</h2>
+  <p>Double-click a line where the label should go. Drag the label along the line (it snaps to the middle) or across it to put it on one side, on the line, or on the other side.</p>
+</article>
+
+<article data-page="lines" data-group="Drawing" data-title="Lines and arrows">
+  <h1>Lines and arrows</h1>
+  <p class="lead">The connector <kbd>E</kbd> draws lines between shapes, from shapes to empty space, or between two free points.</p>
+
+  <h2>Drawing a line</h2>
+  <ul>
+    <li><strong>Drag</strong> from a shape to another shape, or into empty space for a loose end.</li>
+    <li><strong>Click, click</strong>: click a shape or a spot, then a second one. The same shape twice makes a self-loop.</li>
+    <li><strong>Hover dots</strong>: with the select tool, hovering a shape shows small dots on its sides. Drag one to start a line; drop it on empty canvas, or just click it, to make a connected copy of the shape.</li>
+  </ul>
+
+  <h2>Paths</h2>
+  <div class="fig">
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 40Q38 0 68 40"/></svg>Arc</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 42C14 4 62 44 68 6"/></svg>Bézier</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 42C38 42 38 6 68 6"/></svg>S-curve</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 42H38V6H68"/></svg>Elbow</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 42H30a8 8 0 0 0 8-8V14a8 8 0 0 1 8-8h22"/></svg>Rounded elbow</figure>
+  </div>
+  <p>Select a line to see its handles: drag the middle of an arc to bend it, the two square handles of a Bézier, or the step of an elbow. <strong>Straighten</strong> and <strong>Reverse</strong> are in the style bar.</p>
+
+  <h2>Line styles</h2>
+  <div class="fig">
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 24h60"/></svg>Plain</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 24h60" stroke-dasharray="6 4"/></svg>Dashed</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 21h60M8 27h60"/></svg>Double</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 24c3-7 6-7 9 0s6 7 9 0 6-7 9 0 6 7 9 0 6-7 9 0 6 7 9 0h6"/></svg>Wave</figure>
+    <figure><svg viewBox="0 0 76 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 24l4.5-6 9 12 9-12 9 12 9-12 9 12 4.5-6h6"/></svg>Zigzag</figure>
+  </div>
+  <p>Any style goes with any path and any arrow head. Width, dash pattern and colour have editable presets like the shape styles.</p>
+
+  <h2>Arrow heads</h2>
+  <p>Each end has its own head: none, arrow, filled, open triangle, double, dot, open dot, bar, hook or ray. The tool row offers common pairs (arrow, both ways, inheritance, maps-to, …); the ⋯ button opens every head for each end.</p>
+  <p>A <strong>ray</strong> end runs on past its point; on the canvas it goes to the edge, in exports it fades out after one grid step.</p>
+
+  <h2>Self-loops</h2>
+  <p>Click the same shape twice with the connector. Figura picks a free side; drag the loop round the shape to move it.</p>
+
+  <h2>Moving a line's ends</h2>
+  <p>With a shape selected, a dot sits where each of its lines meets it. Drag a dot along the outline, onto another shape, or off into empty space to free that end.</p>
+</article>
+
+<article data-page="wiring" data-group="Drawing" data-title="Ports and fast wiring">
+  <h1>Ports and fast wiring</h1>
+  <p class="lead">Line ends that stay put, and ways to draw many lines at once.</p>
+
+  <h2>Ports</h2>
+  <p>Every line end on a box, triangle or diamond sits on a <strong>side</strong> and stays there when shapes move. Ends on one side spread out evenly, and a side that gets crowded makes the shape grow. Diamonds wire to their corners.</p>
+  <p>Right-click a shape to choose how its ports are laid out: <strong>evenly</strong>, <strong>packed to the ends</strong> of each side, or <strong>all in the middle</strong>.</p>
+
+  <h3>Along the line</h3>
+  <p>Circles work the other way by default: lines aim at the centre and meet the outline where they cross it, as you expect in an automaton. Each shape can be switched in the style bar or its menu (<em>Lines meet</em>): along the line, or fixed ports.</p>
+
+  <h2>Many to one</h2>
+  <ol class="steps">
+    <li>Select two or more shapes.</li>
+    <li>Pick the connector and click the target. Every selected shape is wired to it.</li>
+  </ol>
+  <ul>
+    <li><kbd>Shift</kbd> + click keeps the sources selected for the next target.</li>
+    <li><kbd>Mod</kbd> + click adds or removes a source.</li>
+    <li>Holding <kbd>S</kbd> in the select tool turns on the connector until you let go, with the selection as sources; one shape is enough.</li>
+  </ul>
+
+  <h2>Chains and parallel lines</h2>
+  <ul>
+    <li><strong>Drag through</strong> several shapes with the connector: they are wired in the order you pass them.</li>
+    <li><strong>Hold <kbd>P</kbd></strong> with shapes selected and click a target: parallel lines, each source to the shape at the same offset. A quick tap of <kbd>P</kbd> is still the dot tool.</li>
+    <li><strong>Right-drag</strong> in the connector box-selects, so you can pick sources without switching tools.</li>
+  </ul>
+
+  <h2>Seeing connections</h2>
+  <p>Hold <kbd>Mod</kbd> for a moment with shapes selected: the shapes wired to each one pulse, one colour per selected shape.</p>
+
+  <h2>Deleting a shape in a wire</h2>
+  <p>Delete a shape that has exactly two lines and they join into one, keeping the direction. A new straight line bends just enough to miss shapes in its way.</p>
+</article>
+
+<article data-page="geometry" data-group="Drawing" data-title="Geometry">
+  <h1>Geometry</h1>
+  <p class="lead">Constructions that stay true: move a point and everything built on it follows.</p>
+
+  <h2>Constructions</h2>
+  <p>Select the objects, then press the key or right-click and pick from the menu, which lists only what the selection allows.</p>
+  <div class="tbl"><table>
+    <tr><th>Key</th><th>Builds</th><th>From</th></tr>
+    <tr><td><kbd>M</kbd></td><td>Midpoint</td><td>a line, or two points</td></tr>
+    <tr><td><kbd>J</kbd></td><td>Perpendicular foot</td><td>a point and a line</td></tr>
+    <tr><td><kbd>B</kbd></td><td>Perpendicular bisector</td><td>a line, or two points</td></tr>
+    <tr><td><kbd>N</kbd></td><td>Parallel line</td><td>a point and a line</td></tr>
+    <tr><td><kbd>X</kbd></td><td>Intersection</td><td>two lines, a line and a circle, or two circles</td></tr>
+    <tr><td><kbd>U</kbd></td><td>Reflection</td><td>a point and a line</td></tr>
+    <tr><td><kbd>Q</kbd></td><td>Centre</td><td>a shape</td></tr>
+  </table></div>
+  <p>Built points are dots and cannot be dragged; they fade out when their objects stop meeting. <strong>Make free</strong> in the menu cuts the tie. Deleting an object deletes what was built on it.</p>
+
+  <h2>Compass</h2>
+  <p>Press <kbd>C</kbd>. Press on a centre and drag out the radius, or click the centre and then a point on the circle. A circle built on shapes follows them.</p>
+
+  <h2>Grid</h2>
+  <p>The switch at the top (or <kbd>G</kbd>) cycles dots → half steps → free. Turning the grid on offers to snap everything that is off it in one step.</p>
+</article>
+
+<article data-page="pictures" data-group="Drawing" data-title="Pictures">
+  <h1>Pictures</h1>
+  <p class="lead">Put images on the canvas or inside shapes.</p>
+  <ul>
+    <li><strong>Add</strong>: the picture tool <kbd>I</kbd>, paste an image, or drop a file on the canvas.</li>
+    <li><strong>Fill a shape</strong>: drop a picture onto it, or use the picture button in its style bar.</li>
+    <li><strong>Crop</strong>: on a picture the handles move the frame while the image stays put, and dragging moves the image inside. In a shape, drag to move it and scroll to zoom; it always covers the shape.</li>
+  </ul>
+  <p>Large images are scaled down to 1800 px. In the TikZ export each picture becomes an <code>\includegraphics</code> with a cropped PNG you download from the export window.</p>
+</article>
+
+<!-- ================= WORKSPACE ================= -->
+<article data-page="pages" data-group="Workspace" data-title="Pages, layers and view">
+  <h1>Pages, layers and view</h1>
+  <p class="lead">Organise many diagrams and present them.</p>
+
+  <h2>Pages</h2>
+  <ul>
+    <li>The <strong>+</strong> beside the tabs adds a page. Double-click a tab to rename it; right-click for duplicate, move and close.</li>
+    <li>Every page is saved in your browser automatically.</li>
+  </ul>
+
+  <h2>Lock</h2>
+  <p>The lock beside the zoom bar (<kbd>K</kbd>) freezes a page: dragging only pans and nothing can be edited. Handy while presenting.</p>
+
+  <h2>Layers and alignment</h2>
+  <div class="tbl"><table>
+    <tr><th>Shortcut</th><th>Action</th></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>]</kbd></td><td>Bring forward</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>[</kbd></td><td>Send backward</td></tr>
+    <tr><td><kbd>Shift</kbd> <kbd>Mod</kbd> <kbd>]</kbd></td><td>Bring to front</td></tr>
+    <tr><td><kbd>Shift</kbd> <kbd>Mod</kbd> <kbd>[</kbd></td><td>Send to back</td></tr>
+  </table></div>
+  <p>With several shapes selected the style bar aligns them (left, centre, right, top, middle, bottom) and spaces three or more evenly.</p>
+
+  <h2>Laser pointer</h2>
+  <p>Press <kbd>L</kbd> to point at things while you share your screen. <strong>Dot</strong> is a glowing pointer; <strong>Line</strong> leaves a trail that fades. Click the tool again to switch.</p>
+</article>
+
+<article data-page="toolbar" data-group="Workspace" data-title="Your own toolbar">
+  <h1>Your own toolbar</h1>
+  <p class="lead">Keep the tools you use and add buttons that draw exactly what you need.</p>
+
+  <h2>Layouts</h2>
+  <p>Figura comes with three toolbars, chosen in Settings or by right-clicking the toolbar:</p>
+  <div class="tbl"><table>
+    <tr><th>Layout</th><th>Holds</th></tr>
+    <tr><td>General</td><td>Every built-in tool.</td></tr>
+    <tr><td>ZX-calculus</td><td>Z and X spiders, Hadamard box, wire points, boxes, wires and Hadamard edges.</td></tr>
+    <tr><td>Category theory</td><td>Objects, arrows, mono ↪, epi ↠, dashed, maps-to ↦, 2-cells ⇒ and equals.</td></tr>
+  </table></div>
+  <p>Changing a built-in layout makes your own copy, so the original is always there.</p>
+
+  <h2>Own buttons</h2>
+  <p>A button stores a whole look: a shape with its fill, border, size and starting text, or a line with its heads, dashes and colour. Give it a key and it beats the built-in one while the layout is on.</p>
+  <ol class="steps">
+    <li>Style a shape or line the way you like and select it.</li>
+    <li>Right-click the toolbar and pick <strong>Add the selected look as a button</strong>.</li>
+    <li>Click the new button again (while it is active) to rename it, give it a key or fine-tune it.</li>
+  </ol>
+
+  <h2>The editor</h2>
+  <p><strong>Customize</strong> opens the editor: drag buttons to reorder, pull one off the strip to hide it, drag new ones in from the row below. A built-in tool shows the parts of its tool row, which you can hide or reorder too.</p>
+
+  <h2>Sharing</h2>
+  <p>Export a layout as a <code>.figtool</code> file and import it on another computer, or send it to a co-author. Importing never overwrites your own layouts.</p>
+
+  <h2>Reordering anything</h2>
+  <p>Hold <kbd>Mod</kbd> and drag any toolbar button, top-bar button, option row or quick colour to reorder it. The order is remembered.</p>
+
+  <h2>Shortcuts</h2>
+  <p>Open help (<kbd>?</kbd>) → <strong>Shortcuts</strong>, click an action and press a key. A key already in use swaps over.</p>
+</article>
+
+<!-- ================= LATEX & FILES ================= -->
+<article data-page="tikz" data-group="LaTeX and files" data-title="TikZ export">
+  <h1>TikZ export</h1>
+  <p class="lead">Plain TikZ that compiles with nothing but <code>\usepackage{tikz}</code>.</p>
+
+  <h2>Exporting</h2>
+  <ol class="steps">
+    <li>Press <kbd>Mod</kbd> <kbd>S</kbd> (or the export button) and stay on the <strong>TikZ</strong> tab.</li>
+    <li>Choose <strong>Whole page</strong> or <strong>Selection</strong>.</li>
+    <li><strong>Copy</strong>, or download a <code>.tex</code> file. If the drawing has pictures, download them too.</li>
+  </ol>
+  <p class="note"><kbd>Mod</kbd> <kbd>C</kbd> on a selection also puts its TikZ on your clipboard, ready to paste into your editor.</p>
+
+  <h2>In your document</h2>
+  <p>The export starts with a <code>\usetikzlibrary</code> line naming only the libraries it needs, so the pasted block works as it is:</p>
+<pre><code class="tex">\documentclass{article}
+\usepackage{tikz}
+\usepackage{amsmath} % if your labels use align and friends
+
+\begin{document}
+% paste the exported block here
+\end{document}</code></pre>
+  <p>An exported picture looks like this:</p>
+<pre><code class="tex">% Figura · needs \usepackage{tikz} \usetikzlibrary{arrows.meta}
+\usetikzlibrary{arrows.meta}
+\begin{tikzpicture}[
+  x=0.66667pt,
+  y=-0.66667pt,
+  oval/.style={…},
+  link/.style={…}]
+  \definecolor{fgInk}{HTML}{1D1D1F}
+  \node[oval] (a) at (0,0) {$q_0$};
+  \node[oval] (b) at (160,0) {$q_1$};
+  \draw[link] (a) to[bend left=20] node[lab] {$a$} (b);
+  ...
+\end{tikzpicture}</code></pre>
+  <p>The first line says what the block needs. Options shared by several shapes or lines are pulled into short styles at the top (<code>oval</code>, <code>box</code>, <code>link</code>, <code>lab</code>…), colours are defined once by name, and shapes are real TikZ nodes, so the code stays easy to tweak by hand. One canvas pixel is ⅔ pt and y points down, as on screen.</p>
+
+  <h2>Back into Figura</h2>
+  <p>Paste TikZ onto the canvas, or open a <code>.tex</code> file, and Figura reads it back: nodes, lines, bends, loops, labels, arrow tips, colours (<code>red!30</code>, <code>rgb</code>, <code>\definecolor</code>) and styles from <code>\tikzset</code>. Code that Figura wrote comes back exactly as it was.</p>
+</article>
+
+<article data-page="sty" data-group="LaTeX and files" data-title="figura.sty">
+  <h1>figura.sty</h1>
+  <p class="lead">A short style file for documents with many diagrams, or for writing them by hand.</p>
+
+  <h2>Setup</h2>
+  <p>Download <code>figura.sty</code> from the export window (or the repository) and put it next to your <code>.tex</code> file. The download also defines your own quick colours.</p>
+<pre><code class="tex">\usepackage{figura}
+
+\begin{figura}            % 1 unit = 1 canvas pixel, y points down
+  \node[fg box, fill=fgRose] (a) at (0,0)   {Hello};
+  \node[fg circle]           (b) at (160,0) {$q_0$};
+  \draw[fg line, ->] (a) -- node[fg label] {$f$} (b);
+  \draw[fg line, ->] (b) to[loop at=90] (b);
+\end{figura}</code></pre>
+  <p>Choose the <strong>figura.sty</strong> tab in the export window to get this shorter form.</p>
+
+  <h2>Keys</h2>
+  <div class="tbl"><table>
+    <tr><th>Group</th><th>Keys</th></tr>
+    <tr><td>Shapes</td><td><code>fg box</code>, <code>fg circle</code>, <code>fg diamond</code>, <code>fg triangle</code> (+ <code>points down/left/right</code>), <code>fg dot</code> or <code>fg dot=5</code>, <code>fg text</code>, <code>fg image</code></td></tr>
+    <tr><td>Size</td><td><code>w=80</code>, <code>h=40</code>, <code>r=6</code> (corner radius), <code>size=18</code>, <code>bold</code>, <code>italic</code>, <code>\fgvert{…}</code></td></tr>
+    <tr><td>Border</td><td><code>draw=fgBlue</code>, <code>lw=2.5</code>, <code>dashed</code>, <code>dotted</code>, <code>dashes={on}{off}</code>, <code>double border</code>, <code>draw=none</code></td></tr>
+    <tr><td>Colours</td><td><code>fill=fgSky</code>, <code>text=fgRed</code>, or any hex: <code>fill hex=A04070</code>, <code>draw hex=…</code>, <code>text hex=…</code></td></tr>
+    <tr><td>Lines</td><td><code>fg line</code> + <code>-></code>, <code>&lt;-></code>, <code>-{Triangle}</code>, <code>->></code>, <code>-{Circle}</code>, <code>-|</code>, <code>-{Hooks[right]}</code>; <code>bend left=20</code>, <code>loop at=90</code>, <code>wave</code>, <code>zigzag</code>, <code>double line</code></td></tr>
+    <tr><td>Labels</td><td><code>node[fg label]</code>, <code>node[fg label, swap]</code>, <code>node[fg label on]</code>, <code>pos=0.3</code>; outside a shape <code>label={[fg olabel]above:{…}}</code></td></tr>
+    <tr><td>Options</td><td><code>\begin{figura}[scale=1.2]</code>, <code>[unit=0.5pt]</code>, <code>[baseline=north]</code></td></tr>
+  </table></div>
+
+  <h2>Colours</h2>
+  <p>Fills: <code>fgRose</code>, <code>fgPeach</code>, <code>fgSand</code>, <code>fgMint</code>, <code>fgSky</code>, <code>fgLilac</code>, <code>fgStone</code>. Inks: <code>fgInk</code>, <code>fgGrey</code>, <code>fgRed</code>, <code>fgOrange</code>, <code>fgGreen</code>, <code>fgBlue</code>, <code>fgViolet</code>, <code>fgPink</code>, and the rest of Figura's palette.</p>
+</article>
+
+<article data-page="files" data-group="LaTeX and files" data-title="Images and files">
+  <h1>Images and files</h1>
+  <p class="lead">Everything the export window and the folder button can do.</p>
+
+  <h2>Export window</h2>
+  <div class="tbl"><table>
+    <tr><th>Tab</th><th>Gives</th></tr>
+    <tr><td>TikZ</td><td>Plain TikZ, copy or <code>.tex</code>. See <a href="#/tikz">TikZ export</a>.</td></tr>
+    <tr><td>figura.sty</td><td>Shorter code for documents that load <a href="#/sty">figura.sty</a>.</td></tr>
+    <tr><td>Image</td><td>PNG (with scale) or SVG, whole page or selection, transparent or white. Maths is set in the TeX fonts.</td></tr>
+    <tr><td>File</td><td>A <code>.figura</code> file with every page, or just some.</td></tr>
+  </table></div>
+
+  <h2>Opening</h2>
+  <p><kbd>Mod</kbd> <kbd>O</kbd> or the folder button opens <code>.figura</code>, <code>.tex</code> and <code>.figtool</code> files. Opened pages are added beside the ones you have, never replacing them. You can also drop a file on the window.</p>
+
+  <h2>Where your work lives</h2>
+  <p>Pages are saved in this browser as you go. To move to another computer or browser, or to keep a backup, export a <code>.figura</code> file.</p>
+  <p class="note warn">Clearing the browser's site data removes the saved pages. Keep a <code>.figura</code> file of anything that matters.</p>
+</article>
+
+<!-- ================= REFERENCE ================= -->
+<article data-page="keys" data-group="Reference" data-title="Keyboard shortcuts">
+  <h1>Keyboard shortcuts</h1>
+  <p class="lead">The defaults. Every single-key shortcut can be changed in Help → Shortcuts.</p>
+
+  <h2>Tools</h2>
+  <div class="tbl"><table>
+    <tr><th>Key</th><th>Tool</th></tr>
+    <tr><td><kbd>V</kbd></td><td>Select · again: box ↔ lasso</td></tr>
+    <tr><td><kbd>H</kbd></td><td>Hand (or hold <kbd>Space</kbd>)</td></tr>
+    <tr><td><kbd>O</kbd></td><td>Circle</td></tr>
+    <tr><td><kbd>R</kbd></td><td>Box</td></tr>
+    <tr><td><kbd>Y</kbd></td><td>Triangle</td></tr>
+    <tr><td><kbd>D</kbd></td><td>Diamond</td></tr>
+    <tr><td><kbd>P</kbd></td><td>Dot · hold with shapes selected: parallel lines</td></tr>
+    <tr><td><kbd>T</kbd></td><td>Text (or double-click the canvas)</td></tr>
+    <tr><td><kbd>E</kbd></td><td>Connector · again: line style</td></tr>
+    <tr><td><kbd>C</kbd></td><td>Compass</td></tr>
+    <tr><td><kbd>I</kbd></td><td>Picture</td></tr>
+    <tr><td><kbd>L</kbd></td><td>Laser pointer</td></tr>
+    <tr><td><kbd>1</kbd> … <kbd>0</kbd></td><td>The toolbar's buttons in order</td></tr>
+  </table></div>
+
+  <h2>Drawing</h2>
+  <div class="tbl"><table>
+    <tr><th>Shortcut</th><th>Action</th></tr>
+    <tr><td><kbd>Shift</kbd> + drag</td><td>In proportion: square, circle, square diamond, equilateral triangle</td></tr>
+    <tr><td><kbd>Alt</kbd> + drag</td><td>Draw or resize from the centre</td></tr>
+    <tr><td><kbd>Space</kbd> while dragging</td><td>Move the shape while drawing it</td></tr>
+  </table></div>
+
+  <h2>Connecting</h2>
+  <div class="tbl"><table>
+    <tr><th>Shortcut</th><th>Action</th></tr>
+    <tr><td>Hold <kbd>S</kbd></td><td>Connect the selection to what you click</td></tr>
+    <tr><td>Click the target</td><td>Many to one (2+ selected, connector tool)</td></tr>
+    <tr><td><kbd>Shift</kbd> + click</td><td>…and keep the sources for more targets</td></tr>
+    <tr><td><kbd>Mod</kbd> + click</td><td>Add or drop a source</td></tr>
+    <tr><td>Drag through</td><td>Wire every shape the stroke passes</td></tr>
+    <tr><td>Right-drag</td><td>Box-select in the connector tool</td></tr>
+    <tr><td>Click, click</td><td>Line between two shapes or spots; the same shape twice for a loop</td></tr>
+    <tr><td>Hold <kbd>Mod</kbd></td><td>Show wired neighbours</td></tr>
+  </table></div>
+
+  <h2>Constructing</h2>
+  <div class="tbl"><table>
+    <tr><th>Key</th><th>Builds</th></tr>
+    <tr><td><kbd>M</kbd></td><td>Midpoint</td></tr>
+    <tr><td><kbd>J</kbd></td><td>Perpendicular from a point to a line</td></tr>
+    <tr><td><kbd>B</kbd></td><td>Perpendicular bisector</td></tr>
+    <tr><td><kbd>N</kbd></td><td>Parallel line through a point</td></tr>
+    <tr><td><kbd>X</kbd></td><td>Intersection</td></tr>
+    <tr><td><kbd>U</kbd></td><td>Reflect a point in a line</td></tr>
+    <tr><td><kbd>Q</kbd></td><td>Centre of a shape</td></tr>
+  </table></div>
+
+  <h2>Editing</h2>
+  <div class="tbl"><table>
+    <tr><th>Shortcut</th><th>Action</th></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>Z</kbd></td><td>Undo</td></tr>
+    <tr><td><kbd>Shift</kbd> <kbd>Mod</kbd> <kbd>Z</kbd></td><td>Redo</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td><td>Copy (with TikZ) / cut / paste</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>D</kbd></td><td>Duplicate</td></tr>
+    <tr><td><kbd>Alt</kbd> + drag</td><td>Duplicate while moving</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>A</kbd></td><td>Select all</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd></td><td>Bold / italic / underline</td></tr>
+    <tr><td>Double-click · <kbd>Enter</kbd></td><td>Write in a shape, label a line</td></tr>
+    <tr><td><kbd>W</kbd></td><td>Swap two selected shapes</td></tr>
+    <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Rotate −15° / +15°</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>]</kbd> <kbd>[</kbd></td><td>Forward / backward</td></tr>
+    <tr><td><kbd>Shift</kbd> <kbd>Mod</kbd> <kbd>]</kbd> <kbd>[</kbd></td><td>To front / to back</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd></td><td>Nudge</td></tr>
+    <tr><td><kbd>⌫</kbd></td><td>Delete</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Cancel, deselect, stop writing</td></tr>
+  </table></div>
+
+  <h2>View and files</h2>
+  <div class="tbl"><table>
+    <tr><th>Shortcut</th><th>Action</th></tr>
+    <tr><td><kbd>G</kbd></td><td>Grid: dots → half → free</td></tr>
+    <tr><td><kbd>F</kbd></td><td>Fit everything</td></tr>
+    <tr><td><kbd>=</kbd> <kbd>−</kbd></td><td>Zoom in / out</td></tr>
+    <tr><td><kbd>Mod</kbd> + scroll · pinch</td><td>Zoom</td></tr>
+    <tr><td><kbd>K</kbd></td><td>Lock / unlock the page</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>S</kbd></td><td>Export</td></tr>
+    <tr><td><kbd>Mod</kbd> <kbd>O</kbd></td><td>Open</td></tr>
+    <tr><td><kbd>?</kbd></td><td>Help and shortcuts</td></tr>
+  </table></div>
+</article>
+
+</main>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+
+<div class="sk" id="sk" hidden>
+  <div class="sk-box" role="dialog" aria-label="Search">
+    <div class="sk-in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><input id="skIn" placeholder="Search the guide" autocomplete="off" spellcheck="false"></div>
+    <div class="sk-res" id="skRes"></div>
+  </div>
+</div>
+
+<script src="guide.js?v=1"></script>
+</body>
+</html>

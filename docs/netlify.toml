@@ -1,0 +1,8 @@
+# Site 2: the Figura guide. Netlify: Base directory "docs", Publish directory "docs" (or ".")
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"

@@ -1,0 +1,10 @@
+# Site 1: the Figura app. Netlify: Base directory empty, Publish directory "."
+[build]
+  publish = "."
+
+# the guide is its own site (docs/), not part of the app's domain
+[[redirects]]
+  from = "/docs/*"
+  to = "/"
+  status = 301
+  force = true
